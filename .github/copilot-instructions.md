@@ -84,9 +84,29 @@ world_platform (fixed ground reference, MUST have inertial properties)
   - Virtual joint: `world_platform` to `base_link` (NOT "world" frame)
   - Passive joint: `right_finger_joint` (mimic joint not actuated directly)
   - Collision disable rules for platform-robot adjacency
-- **Launch pattern**: `gazebo_moveit.launch` combines Gazebo + MoveIt + joint_state relay
-  - Uses `topic_tools/relay` to forward `/ur10e_robot/joint_states` → `/joint_states`
-  - Platform joint visible in joint states but not part of arm planning group
+  - Named states: `home` (all zeros), `ready` (shoulder_lift=-1.57)
+
+**CRITICAL**: MoveIt requires THREE components to work with Gazebo:
+1. **move_group node** - motion planning services
+2. **Joint state relay** - forwards `/ur10e_robot/joint_states` → `/joint_states`
+3. **MoveIt RViz** - provides interactive markers for planning
+
+**Pattern for adding MoveIt to launch files**:
+```xml
+<!-- Launch MoveIt move_group -->
+<include file="$(find ur10e_moveit_config)/launch/move_group.launch">
+  <arg name="allow_trajectory_execution" value="true"/>
+</include>
+
+<!-- Relay joint states to MoveIt's expected topic -->
+<node name="joint_state_relay" pkg="topic_tools" type="relay" 
+      args="/ur10e_robot/joint_states /joint_states"/>
+
+<!-- Launch MoveIt RViz (not standard RViz) -->
+<include file="$(find ur10e_moveit_config)/launch/moveit_rviz.launch"/>
+```
+
+**Common error**: Launching only Gazebo + RViz without MoveIt = no interactive motion planning available
 
 ## Developer Workflows
 
@@ -99,13 +119,16 @@ source devel/setup.bash
 
 ### Launch Simulation Scenarios
 ```bash
-# Standard Gazebo simulation with empty world
+# Standard Gazebo simulation with empty world (no motion planning)
 roslaunch pkg01 gazebo_ur10e.launch
 
-# Farm world with custom bucket model
+# Farm world with bucket model + MoveIt (default - enables interactive planning)
 roslaunch pkg01 gazebo_farm.launch
 
-# With MoveIt motion planning
+# Farm world without MoveIt (visualization only)
+roslaunch pkg01 gazebo_farm.launch moveit:=false
+
+# Dedicated MoveIt launch (empty world + motion planning)
 roslaunch pkg01 gazebo_moveit.launch
 
 # Platform-only demo (automated movement sequence)
@@ -171,8 +194,12 @@ pkg01/
 
 ### Launch File Patterns
 - **Gazebo simulation**: `gazebo_*.launch` (spawns robot, loads controllers, optional RViz)
+  - Core components: URDF load → Gazebo spawn → controller spawner → robot_state_publisher
+  - Standard args: `paused`, `gui`, `rviz`, `world_name`
 - **Visualization only**: `*.launch` (no Gazebo, uses joint_state_publisher_gui)
-- **MoveIt integration**: `gazebo_moveit.launch` (Gazebo + MoveIt + joint_state relay)
+- **MoveIt integration**: Requires move_group + joint_state_relay + MoveIt RViz
+  - `gazebo_moveit.launch` - Full setup: Gazebo + MoveIt
+  - `gazebo_farm.launch` - Has optional `moveit:=true` arg (default enabled)
 - **Custom worlds**: Set `GAZEBO_MODEL_PATH` env var, specify world file path
 
 ### Python Scripts Convention
@@ -242,6 +269,9 @@ bucket/
    - Without inertial: "joint not in gazebo model" error from ros_control parser
 6. **Xacro macro ordering**: Include platform macro BEFORE connecting base_link to robot_mount
 7. **Gazebo model paths**: Set `GAZEBO_MODEL_PATH` env var in launch files for custom models
+8. **Cannot move robot in RViz**: Launch file missing MoveIt integration (move_group + relay + MoveIt RViz)
+   - Symptom: RViz shows robot but no interactive markers or Planning tab
+   - Fix: Add MoveIt components or use launch file with `moveit:=true` arg
 
 ## Testing New Features
 1. Test URDF validity: `check_urdf <(xacro ur10e.urdf.xacro)`

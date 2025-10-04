@@ -49,9 +49,28 @@
     <remap from="/joint_states" to="/ur10e_robot/joint_states" />
   </node>
 
+  <!-- Launch MoveIt for motion planning -->
+  <arg name="moveit" default="true" doc="Launch MoveIt motion planning"/>
+  <group if="$(arg moveit)">
+    <!-- Launch MoveIt move_group -->
+    <include file="$(find ur10e_moveit_config)/launch/move_group.launch">
+      <arg name="allow_trajectory_execution" value="true"/>
+    </include>
+    
+    <!-- Remap joint states from namespaced topic to MoveIt's expected topic -->
+    <node name="joint_state_relay" pkg="topic_tools" type="relay" 
+          args="/ur10e_robot/joint_states /joint_states" output="screen"/>
+  </group>
+
   <!-- Optional: Launch RViz for visualization -->
   <arg name="rviz" default="true" doc="Launch RViz"/>
-  <node if="$(arg rviz)" name="rviz" pkg="rviz" type="rviz"
-        args="-d $(find pkg01)/config/rvizconfig01.rviz"/>
+  <group if="$(arg rviz)">
+    <!-- Launch MoveIt RViz if MoveIt is enabled, otherwise standard RViz -->
+    <include if="$(arg moveit)" file="$(find ur10e_moveit_config)/launch/moveit_rviz.launch">
+      <arg name="rviz_config" value="$(find pkg01)/config/rvizconfig01.rviz"/>
+    </include>
+    <node unless="$(arg moveit)" name="rviz" pkg="rviz" type="rviz"
+          args="-d $(find pkg01)/config/rvizconfig01.rviz"/>
+  </group>
 
 </launch>

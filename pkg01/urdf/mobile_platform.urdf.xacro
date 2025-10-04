@@ -52,6 +52,61 @@
       </inertial>
     </link>
 
+    <!-- Wheel properties -->
+    <xacro:property name="wheel_radius" value="0.1"/>
+    <xacro:property name="wheel_width" value="0.05"/>
+    <xacro:property name="wheel_mass" value="2.0"/>
+    <xacro:property name="wheel_offset_x" value="0.4"/>
+    <xacro:property name="wheel_offset_y" value="0.35"/>
+
+    <!-- Wheel macro -->
+    <xacro:macro name="platform_wheel" params="wheel_prefix x_pos y_pos">
+      <link name="${prefix}${wheel_prefix}_wheel">
+        <visual>
+          <geometry>
+            <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+          </geometry>
+          <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+          <material name="Black">
+            <color rgba="0.1 0.1 0.1 1.0"/>
+          </material>
+        </visual>
+        <collision>
+          <geometry>
+            <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+          </geometry>
+          <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+        </collision>
+        <inertial>
+          <mass value="${wheel_mass}"/>
+          <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+          <inertia ixx="${(1/12) * wheel_mass * (3*wheel_radius*wheel_radius + wheel_width*wheel_width)}" 
+                   ixy="0.0" ixz="0.0"
+                   iyy="${(1/12) * wheel_mass * (3*wheel_radius*wheel_radius + wheel_width*wheel_width)}" 
+                   iyz="0.0"
+                   izz="${0.5 * wheel_mass * wheel_radius * wheel_radius}"/>
+        </inertial>
+      </link>
+
+      <joint name="${prefix}${wheel_prefix}_wheel_joint" type="fixed">
+        <parent link="${prefix}platform_base"/>
+        <child link="${prefix}${wheel_prefix}_wheel"/>
+        <origin xyz="${x_pos} ${y_pos} ${wheel_radius - platform_height/2}" rpy="0 0 0"/>
+      </joint>
+
+      <gazebo reference="${prefix}${wheel_prefix}_wheel">
+        <material>Gazebo/Black</material>
+        <mu1>1.0</mu1>
+        <mu2>1.0</mu2>
+      </gazebo>
+    </xacro:macro>
+
+    <!-- Instantiate 4 wheels -->
+    <xacro:platform_wheel wheel_prefix="front_left" x_pos="${wheel_offset_x}" y_pos="${wheel_offset_y}"/>
+    <xacro:platform_wheel wheel_prefix="front_right" x_pos="${wheel_offset_x}" y_pos="${-wheel_offset_y}"/>
+    <xacro:platform_wheel wheel_prefix="rear_left" x_pos="${-wheel_offset_x}" y_pos="${wheel_offset_y}"/>
+    <xacro:platform_wheel wheel_prefix="rear_right" x_pos="${-wheel_offset_x}" y_pos="${-wheel_offset_y}"/>
+
     <!-- Prismatic joint for linear motion (0 to 10 meters along X axis) -->
     <joint name="${prefix}platform_joint" type="prismatic">
       <parent link="${prefix}world_platform"/>
