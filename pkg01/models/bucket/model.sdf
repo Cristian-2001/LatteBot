@@ -27,21 +27,21 @@
       
       <!-- Simplified collision: Cylinder for bucket body -->
       <collision name="bucket_body">
-        <pose>0 0.25 0 1.5707963267948966 0 0</pose>
+        <pose>0 0.18 0 1.5707963267948966 0 0</pose>
         <geometry>
           <cylinder>
-            <radius>0.15</radius>
-            <length>0.5</length>
+            <radius>0.125</radius>
+            <length>0.35</length>
           </cylinder>
         </geometry>
       </collision>
       
       <!-- Simplified collision: Box for handle (easy to grasp) -->
       <collision name="bucket_handle">
-        <pose>0 0.7 0 0 0 0</pose>
+        <pose>0 0.503 0 0 0 0</pose>
         <geometry>
           <box>
-            <size>0.35 0.03 0.03</size>
+            <size>0.1 0.015 0.015</size>
           </box>
         </geometry>
       </collision>

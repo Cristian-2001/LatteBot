@@ -202,7 +202,7 @@
     <transmission name="${prefix}left_finger_trans">
       <type>transmission_interface/SimpleTransmission</type>
       <joint name="${prefix}left_finger_joint">
-        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
       </joint>
       <actuator name="${prefix}left_finger_motor">
         <mechanicalReduction>1</mechanicalReduction>
@@ -213,24 +213,12 @@
     <transmission name="${prefix}right_finger_trans">
       <type>transmission_interface/SimpleTransmission</type>
       <joint name="${prefix}right_finger_joint">
-        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
       </joint>
       <actuator name="${prefix}right_finger_motor">
         <mechanicalReduction>1</mechanicalReduction>
       </actuator>
     </transmission>
-
-    <!-- Gazebo Mimic Joint Plugin (makes right finger mirror left finger motion) -->
-    <gazebo>
-      <plugin name="${prefix}mimic_joint_plugin" filename="libroboticsgroup_gazebo_mimic_joint_plugin.so">
-        <joint>${prefix}left_finger_joint</joint>
-        <mimicJoint>${prefix}right_finger_joint</mimicJoint>
-        <multiplier>1.0</multiplier>
-        <offset>0.0</offset>
-        <maxEffort>100</maxEffort>
-        <robotNamespace>/</robotNamespace>
-      </plugin>
-    </gazebo>
 
   </xacro:macro>
 
