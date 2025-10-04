@@ -1,0 +1,237 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <!-- Simple Gripper Macro for Pick and Place Operations -->
+  <!-- Can be attached to UR10e tool0/flange -->
+  
+  <xacro:macro name="simple_gripper" params="prefix">
+    
+    <!-- Materials -->
+    <material name="${prefix}gripper_gray">
+      <color rgba="0.5 0.5 0.5 1.0"/>
+    </material>
+    
+    <material name="${prefix}gripper_dark">
+      <color rgba="0.3 0.3 0.3 1.0"/>
+    </material>
+
+    <material name="${prefix}gripper_blue">
+      <color rgba="0.2 0.4 0.8 1.0"/>
+    </material>
+
+    <!-- Base Link (mounts to robot tool flange) -->
+    <link name="${prefix}gripper_base_link">
+      <visual>
+        <origin xyz="0 0 0.025" rpy="0 0 0"/>
+        <geometry>
+          <cylinder radius="0.04" length="0.05"/>
+        </geometry>
+        <material name="${prefix}gripper_gray"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0.025" rpy="0 0 0"/>
+        <geometry>
+          <cylinder radius="0.04" length="0.05"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="0 0 0.025" rpy="0 0 0"/>
+        <mass value="0.3"/>
+        <inertia ixx="0.0001" ixy="0.0" ixz="0.0" 
+                 iyy="0.0001" iyz="0.0" 
+                 izz="0.0001"/>
+      </inertial>
+    </link>
+
+    <!-- Palm Link (connection point for fingers) -->
+    <link name="${prefix}gripper_palm">
+      <visual>
+        <origin xyz="0 0 0.03" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.06 0.08 0.02"/>
+        </geometry>
+        <material name="${prefix}gripper_blue"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0.03" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.06 0.08 0.02"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="0 0 0.03" rpy="0 0 0"/>
+        <mass value="0.15"/>
+        <inertia ixx="0.00005" ixy="0.0" ixz="0.0" 
+                 iyy="0.00005" iyz="0.0" 
+                 izz="0.00005"/>
+      </inertial>
+    </link>
+
+    <!-- Left Finger -->
+    <link name="${prefix}left_finger">
+      <visual>
+        <origin xyz="0 0 0.045" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.015 0.025 0.09"/>
+        </geometry>
+        <material name="${prefix}gripper_dark"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0.045" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.015 0.025 0.09"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="0 0 0.045" rpy="0 0 0"/>
+        <mass value="0.03"/>
+        <inertia ixx="0.00001" ixy="0.0" ixz="0.0" 
+                 iyy="0.00001" iyz="0.0" 
+                 izz="0.00001"/>
+      </inertial>
+    </link>
+
+    <!-- Right Finger -->
+    <link name="${prefix}right_finger">
+      <visual>
+        <origin xyz="0 0 0.045" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.015 0.025 0.09"/>
+        </geometry>
+        <material name="${prefix}gripper_dark"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0.045" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.015 0.025 0.09"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="0 0 0.045" rpy="0 0 0"/>
+        <mass value="0.03"/>
+        <inertia ixx="0.00001" ixy="0.0" ixz="0.0" 
+                 iyy="0.00001" iyz="0.0" 
+                 izz="0.00001"/>
+      </inertial>
+    </link>
+
+    <!-- Gripper Tip Link (virtual link for grasping point) -->
+    <link name="${prefix}gripper_tip">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <sphere radius="0.005"/>
+        </geometry>
+        <material name="${prefix}gripper_blue"/>
+      </visual>
+    </link>
+
+    <!-- Joint: Base to Palm -->
+    <joint name="${prefix}base_to_palm_joint" type="fixed">
+      <parent link="${prefix}gripper_base_link"/>
+      <child link="${prefix}gripper_palm"/>
+      <origin xyz="0 0 0.05" rpy="0 0 0"/>
+    </joint>
+
+    <!-- Joint: Left Finger (Prismatic - opens/closes) -->
+    <!-- Finger width = 25mm, so half-width = 12.5mm -->
+    <!-- Origin at palm edge (40mm/2 = 20mm) minus finger half-width (12.5mm) = 7.5mm -->
+    <!-- Lower limit (closed): fingers meet at center without overlap -->
+    <!-- Upper limit (open): 25mm travel = 50mm total grip width -->
+    <joint name="${prefix}left_finger_joint" type="prismatic">
+      <parent link="${prefix}gripper_palm"/>
+      <child link="${prefix}left_finger"/>
+      <origin xyz="0 0.0125 0.04" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="-0.0125" upper="0.025" effort="100" velocity="0.5"/>
+      <dynamics damping="1.0" friction="0.5"/>
+    </joint>
+
+    <!-- Joint: Right Finger (Prismatic - opens/closes) -->
+    <!-- Mirrors left finger motion to maintain symmetric gripping -->
+    <joint name="${prefix}right_finger_joint" type="prismatic">
+      <parent link="${prefix}gripper_palm"/>
+      <child link="${prefix}right_finger"/>
+      <origin xyz="0 -0.0125 0.04" rpy="0 0 0"/>
+      <axis xyz="0 -1 0"/>
+      <limit lower="-0.0125" upper="0.025" effort="100" velocity="0.5"/>
+      <dynamics damping="1.0" friction="0.5"/>
+    </joint>
+
+    <!-- Joint: Palm to Gripper Tip (fixed, for reference point) -->
+    <joint name="${prefix}palm_to_tip_joint" type="fixed">
+      <parent link="${prefix}gripper_palm"/>
+      <child link="${prefix}gripper_tip"/>
+      <origin xyz="0 0 0.13" rpy="0 0 0"/>
+    </joint>
+
+    <!-- Gazebo-specific configurations -->
+    <gazebo reference="${prefix}gripper_base_link">
+      <material>Gazebo/Grey</material>
+      <mu1>0.5</mu1>
+      <mu2>0.5</mu2>
+    </gazebo>
+
+    <gazebo reference="${prefix}gripper_palm">
+      <material>Gazebo/Blue</material>
+      <mu1>0.8</mu1>
+      <mu2>0.8</mu2>
+    </gazebo>
+
+    <gazebo reference="${prefix}left_finger">
+      <material>Gazebo/DarkGrey</material>
+      <mu1>2.0</mu1>
+      <mu2>2.0</mu2>
+      <kp>1000000.0</kp>
+      <kd>100.0</kd>
+      <minDepth>0.001</minDepth>
+      <maxVel>0.1</maxVel>
+    </gazebo>
+
+    <gazebo reference="${prefix}right_finger">
+      <material>Gazebo/DarkGrey</material>
+      <mu1>2.0</mu1>
+      <mu2>2.0</mu2>
+      <kp>1000000.0</kp>
+      <kd>100.0</kd>
+      <minDepth>0.001</minDepth>
+      <maxVel>0.1</maxVel>
+    </gazebo>
+
+    <!-- Transmission for left finger (for ros_control) -->
+    <transmission name="${prefix}left_finger_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <joint name="${prefix}left_finger_joint">
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+      </joint>
+      <actuator name="${prefix}left_finger_motor">
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+    </transmission>
+
+    <!-- Transmission for right finger (for ros_control) -->
+    <transmission name="${prefix}right_finger_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <joint name="${prefix}right_finger_joint">
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+      </joint>
+      <actuator name="${prefix}right_finger_motor">
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+    </transmission>
+
+    <!-- Gazebo Mimic Joint Plugin (makes right finger mirror left finger motion) -->
+    <gazebo>
+      <plugin name="${prefix}mimic_joint_plugin" filename="libroboticsgroup_gazebo_mimic_joint_plugin.so">
+        <joint>${prefix}left_finger_joint</joint>
+        <mimicJoint>${prefix}right_finger_joint</mimicJoint>
+        <multiplier>1.0</multiplier>
+        <offset>0.0</offset>
+        <maxEffort>100</maxEffort>
+        <robotNamespace>/</robotNamespace>
+      </plugin>
+    </gazebo>
+
+  </xacro:macro>
+
+</robot>

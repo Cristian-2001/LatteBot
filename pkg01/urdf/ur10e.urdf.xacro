@@ -1,0 +1,388 @@
+<?xml version="1.0"?>
+<robot name="ur10e" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Constants for robot dimensions -->
+  <xacro:property name="PI" value="3.1415926535897931"/>
+  
+  <!-- Joint limits -->
+  <xacro:property name="shoulder_pan_lower_limit" value="${-2*PI}"/>
+  <xacro:property name="shoulder_pan_upper_limit" value="${2*PI}"/>
+  <xacro:property name="shoulder_lift_lower_limit" value="${-PI}"/>
+  <xacro:property name="shoulder_lift_upper_limit" value="${PI}"/>
+  <xacro:property name="elbow_joint_lower_limit" value="${-PI}"/>
+  <xacro:property name="elbow_joint_upper_limit" value="${PI}"/>
+  <xacro:property name="wrist_1_lower_limit" value="${-2*PI}"/>
+  <xacro:property name="wrist_1_upper_limit" value="${2*PI}"/>
+  <xacro:property name="wrist_2_lower_limit" value="${-2*PI}"/>
+  <xacro:property name="wrist_2_upper_limit" value="${2*PI}"/>
+  <xacro:property name="wrist_3_lower_limit" value="${-2*PI}"/>
+  <xacro:property name="wrist_3_upper_limit" value="${2*PI}"/>
+
+  <!-- Link lengths for UR10e -->
+  <xacro:property name="d1" value="0.1807"/>
+  <xacro:property name="a2" value="0.6127"/>
+  <xacro:property name="d3" value="0.1365"/>
+  <xacro:property name="a3" value="0.57155"/>
+  <xacro:property name="d4" value="0.17415"/>
+  <xacro:property name="d5" value="0.11985"/>
+  <xacro:property name="d6" value="0.11655"/>
+
+  <!-- Materials -->
+  <material name="LightGrey">
+    <color rgba="0.7 0.7 0.7 1.0"/>
+  </material>
+  
+  <material name="Blue">
+    <color rgba="0.0 0.0 0.8 1.0"/>
+  </material>
+  
+  <material name="Red">
+    <color rgba="0.8 0.0 0.0 1.0"/>
+  </material>
+
+  <!-- Base link -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://pkg01/urdf/meshes/ur10e/visual/base.dae"/>
+      </geometry>
+      <material name="LightGrey"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://pkg01/urdf/meshes/ur10e/collision/base.stl"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="4.0"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="0.00443333156" ixy="0.0" ixz="0.0"
+               iyy="0.00443333156" iyz="0.0" 
+               izz="0.0072"/>
+    </inertial>
+  </link>
+
+  <link name="shoulder_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://pkg01/urdf/meshes/ur10e/visual/shoulder.dae"/>
+      </geometry>
+      <material name="LightGrey"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://pkg01/urdf/meshes/ur10e/collision/shoulder.stl"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="7.778"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="0.0314743125" ixy="0.0" ixz="0.0"
+               iyy="0.0314743125" iyz="0.0" 
+               izz="0.021875"/>
+    </inertial>
+  </link>
+
+  <link name="upper_arm_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://pkg01/urdf/meshes/ur10e/visual/upperarm.dae"/>
+      </geometry>
+      <material name="LightGrey"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://pkg01/urdf/meshes/ur10e/collision/upperarm.stl"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="12.93"/>
+      <origin xyz="0 0 ${a2/2.0}" rpy="0 0 0"/>
+      <inertia ixx="0.421753803" ixy="0.0" ixz="0.0"
+               iyy="0.421753803" iyz="0.0" 
+               izz="0.036365625"/>
+    </inertial>
+  </link>
+
+  <link name="forearm_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://pkg01/urdf/meshes/ur10e/visual/forearm.dae"/>
+      </geometry>
+      <material name="LightGrey"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://pkg01/urdf/meshes/ur10e/collision/forearm.stl"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="3.87"/>
+      <origin xyz="0 0 ${a3/2.0}" rpy="0 0 0"/>
+      <inertia ixx="0.111172755" ixy="0.0" ixz="0.0"
+               iyy="0.111172755" iyz="0.0" 
+               izz="0.010884375"/>
+    </inertial>
+  </link>
+
+  <link name="wrist_1_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://pkg01/urdf/meshes/ur10e/visual/wrist1.dae"/>
+      </geometry>
+      <material name="LightGrey"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://pkg01/urdf/meshes/ur10e/collision/wrist1.stl"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="1.96"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="0.0051082479" ixy="0.0" ixz="0.0"
+               iyy="0.0051082479" iyz="0.0" 
+               izz="0.0055125"/>
+    </inertial>
+  </link>
+
+  <link name="wrist_2_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://pkg01/urdf/meshes/ur10e/visual/wrist2.dae"/>
+      </geometry>
+      <material name="LightGrey"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://pkg01/urdf/meshes/ur10e/collision/wrist2.stl"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="1.96"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="0.0051082479" ixy="0.0" ixz="0.0"
+               iyy="0.0051082479" iyz="0.0" 
+               izz="0.0055125"/>
+    </inertial>
+  </link>
+
+  <link name="wrist_3_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://pkg01/urdf/meshes/ur10e/visual/wrist3.dae"/>
+      </geometry>
+      <material name="LightGrey"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://pkg01/urdf/meshes/ur10e/collision/wrist3.stl"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.202"/>
+      <origin xyz="0.0 0.0 -0.025" rpy="0 0 0"/>
+      <inertia ixx="0.000526462289" ixy="0.0" ixz="0.0"
+               iyy="0.000526462289" iyz="0.0" 
+               izz="0.000568125"/>
+    </inertial>
+  </link>
+
+  <link name="ee_link">
+    <collision>
+      <geometry>
+        <box size="0.01 0.01 0.01"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="-0.01 0 0"/>
+    </collision>
+  </link>
+
+  <link name="tool0"/>
+
+  <link name="flange"/>
+
+  <!-- Shoulder link -->
+  <joint name="shoulder_pan_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="shoulder_link"/>
+    <origin xyz="0.0 0.0 ${d1}" rpy="0.0 0.0 0.0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="${shoulder_pan_lower_limit}" upper="${shoulder_pan_upper_limit}"
+           effort="330.0" velocity="2.16"/>
+    <dynamics damping="0.0" friction="0.0"/>
+  </joint>
+
+  <!-- Upper arm link -->
+  <joint name="shoulder_lift_joint" type="revolute">
+    <parent link="shoulder_link"/>
+    <child link="upper_arm_link"/>
+    <origin xyz="0.0 ${d4} 0.0" rpy="0.0 0.0 0.0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="${shoulder_lift_lower_limit}" upper="${shoulder_lift_upper_limit}"
+           effort="330.0" velocity="2.16"/>
+    <dynamics damping="0.0" friction="0.0"/>
+  </joint>
+
+  <!-- Forearm link -->
+  <joint name="elbow_joint" type="revolute">
+    <parent link="upper_arm_link"/>
+    <child link="forearm_link"/>
+    <origin xyz="0.0 ${-d3} ${a2}" rpy="0.0 0.0 0.0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="${elbow_joint_lower_limit}" upper="${elbow_joint_upper_limit}"
+           effort="150.0" velocity="3.15"/>
+    <dynamics damping="0.0" friction="0.0"/>
+  </joint>
+
+  <!-- Wrist 1 link -->
+  <joint name="wrist_1_joint" type="revolute">
+    <parent link="forearm_link"/>
+    <child link="wrist_1_link"/>
+    <origin xyz="0.0 0.0 ${a3}" rpy="0.0 0.0 0.0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="${wrist_1_lower_limit}" upper="${wrist_1_upper_limit}"
+           effort="54.0" velocity="3.2"/>
+    <dynamics damping="0.0" friction="0.0"/>
+  </joint>
+
+  <!-- Wrist 2 link -->
+  <joint name="wrist_2_joint" type="revolute">
+    <parent link="wrist_1_link"/>
+    <child link="wrist_2_link"/>
+    <origin xyz="0.0 ${d3} 0.0" rpy="0.0 0.0 0.0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="${wrist_2_lower_limit}" upper="${wrist_2_upper_limit}"
+           effort="54.0" velocity="3.2"/>
+    <dynamics damping="0.0" friction="0.0"/>
+  </joint>
+
+  <!-- Wrist 3 link -->
+  <joint name="wrist_3_joint" type="revolute">
+    <parent link="wrist_2_link"/>
+    <child link="wrist_3_link"/>
+    <origin xyz="0.0 0.0 ${d5}" rpy="0.0 0.0 0.0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="${wrist_3_lower_limit}" upper="${wrist_3_upper_limit}"
+           effort="54.0" velocity="3.2"/>
+    <dynamics damping="0.0" friction="0.0"/>
+  </joint>
+
+  <!-- End effector frame -->
+  <joint name="ee_fixed_joint" type="fixed">
+    <parent link="wrist_3_link"/>
+    <child link="ee_link"/>
+    <origin xyz="0.0 ${d6} 0.0" rpy="0.0 0.0 0.0"/>
+  </joint>
+
+  <!-- Tool frame -->
+  <joint name="wrist_3_link-tool0_fixed_joint" type="fixed">
+    <origin xyz="0 ${d6} 0" rpy="0 0 0"/>
+    <parent link="wrist_3_link"/>
+    <child link="tool0"/>
+  </joint>
+
+  <!-- ROS-Industrial 'flange' frame: attachment point for EEF models -->
+  <joint name="tool0-flange_fixed_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="tool0"/>
+    <child link="flange"/>
+  </joint>
+
+  <joint name="robot_mount_to_base" type="fixed">
+    <origin xyz="0 0 0.05" rpy="0 0 0"/>
+    <parent link="robot_mount"/>
+    <child link="base_link"/>
+  </joint>
+
+  <!-- Fix world platform link to ground in Gazebo -->
+  <gazebo reference="world_platform">
+    <static>true</static>
+  </gazebo>
+
+  <!-- Include mobile platform macros -->
+  <xacro:include filename="$(find pkg01)/urdf/mobile_platform.urdf.xacro"/>
+
+  <!-- Instantiate the mobile platform -->
+  <xacro:mobile_platform prefix=""/>
+
+  <!-- Include gripper macros -->
+ <xacro:include filename="$(find pkg01)/urdf/simple_gripper.urdf.xacro"/>
+
+  <xacro:simple_gripper prefix=""/>
+
+  <joint name="gripper_mount" type="fixed">
+    <parent link="flange"/>
+    <child link="gripper_base_link"/>
+    <origin xyz="0 0 0" rpy="${-PI/2.0} 0 0"/>
+  </joint>
+
+  <!-- Gazebo plugin for ROS Control -->
+  <gazebo>
+    <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+      <robotNamespace>/ur10e_robot</robotNamespace>
+      <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
+    </plugin>
+  </gazebo>
+
+  <!-- Add transmission elements for each joint -->
+  <transmission name="shoulder_pan_trans">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="shoulder_pan_joint">
+      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="shoulder_pan_motor">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+
+  <transmission name="shoulder_lift_trans">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="shoulder_lift_joint">
+      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="shoulder_lift_motor">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+
+  <transmission name="elbow_trans">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="elbow_joint">
+      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="elbow_motor">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+
+  <transmission name="wrist_1_trans">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="wrist_1_joint">
+      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="wrist_1_motor">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+
+  <transmission name="wrist_2_trans">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="wrist_2_joint">
+      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="wrist_2_motor">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+
+  <transmission name="wrist_3_trans">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="wrist_3_joint">
+      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="wrist_3_motor">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+
+</robot>

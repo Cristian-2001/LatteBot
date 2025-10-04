@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Gazebo simulation arguments -->
+  <arg name="paused" default="false"/>
+  <arg name="gui" default="true"/>
+  
+  <!-- Launch Gazebo with robot -->
+  <include file="$(find pkg01)/launch/gazebo_ur10e.launch">
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="gui" value="$(arg gui)"/>
+    <arg name="rviz" value="false"/>
+  </include>
+  
+  <!-- Launch MoveIt -->
+  <include file="$(find ur10e_moveit_config)/launch/move_group.launch">
+    <arg name="allow_trajectory_execution" value="true"/>
+  </include>
+  
+  <!-- Remap joint states from namespaced topic to MoveIt's expected topic -->
+  <node name="joint_state_relay" pkg="topic_tools" type="relay" 
+        args="/ur10e_robot/joint_states /joint_states" output="screen"/>
+  
+  <!-- Launch MoveIt RViz with custom config -->
+  <include file="$(find ur10e_moveit_config)/launch/moveit_rviz.launch">
+    <arg name="rviz_config" value="$(find pkg01)/config/rvizconfig01.rviz"/>
+  </include>
+  
+</launch>
