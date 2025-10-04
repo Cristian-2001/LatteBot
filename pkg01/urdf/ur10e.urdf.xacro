@@ -288,22 +288,18 @@
     <child link="flange"/>
   </joint>
 
-  <joint name="robot_mount_to_base" type="fixed">
-    <origin xyz="0 0 0.05" rpy="0 0 0"/>
-    <parent link="robot_mount"/>
-    <child link="base_link"/>
-  </joint>
-
-  <!-- Fix world platform link to ground in Gazebo -->
-  <gazebo reference="world_platform">
-    <static>true</static>
-  </gazebo>
-
   <!-- Include mobile platform macros -->
   <xacro:include filename="$(find pkg01)/urdf/mobile_platform.urdf.xacro"/>
 
   <!-- Instantiate the mobile platform -->
   <xacro:mobile_platform prefix=""/>
+
+  <!-- Connect robot base to platform mount -->
+  <joint name="robot_mount_to_base" type="fixed">
+    <origin xyz="0 0 0.05" rpy="0 0 0"/>
+    <parent link="robot_mount"/>
+    <child link="base_link"/>
+  </joint>
 
   <!-- Include gripper macros -->
  <xacro:include filename="$(find pkg01)/urdf/simple_gripper.urdf.xacro"/>

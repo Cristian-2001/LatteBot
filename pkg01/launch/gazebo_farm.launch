@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<launch>
+
+  <!-- Launch Arguments -->
+  <arg name="paused" default="false" doc="Start Gazebo paused"/>
+  <arg name="use_sim_time" default="true" doc="Use simulation time"/>
+  <arg name="gui" default="true" doc="Launch Gazebo GUI"/>
+  <arg name="headless" default="false" doc="Launch Gazebo in headless mode"/>
+  <arg name="debug" default="false" doc="Debug mode"/>
+  <arg name="verbose" default="false" doc="Verbose mode"/>
+
+  <!-- Load robot description to parameter server -->
+  <param name="robot_description" 
+         command="$(find xacro)/xacro --inorder $(find pkg01)/urdf/ur10e.urdf.xacro"/>
+
+  <!-- Load joint controller configurations from YAML file to parameter server -->
+  <rosparam file="$(find pkg01)/controller/ur10e_controllers.yaml" command="load"/>
+
+  <!-- Set Gazebo model path to include our custom models -->
+  <env name="GAZEBO_MODEL_PATH" value="$(find pkg01)/models:$(optenv GAZEBO_MODEL_PATH)"/>
+
+  <!-- Start Gazebo with farm world -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find pkg01)/world/farm.world"/>
+    <arg name="debug" value="$(arg debug)" />
+    <arg name="gui" value="$(arg gui)" />
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+    <arg name="headless" value="$(arg headless)"/>
+    <arg name="verbose" value="$(arg verbose)"/>
+  </include>
+
+  <!-- Spawn the robot model in Gazebo -->
+  <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" 
+        args="-param robot_description -urdf -model ur10e_robot -z 0.0"
+        output="screen" />
+
+  <!-- Load and start the joint state controller -->
+  <node name="controller_spawner" pkg="controller_manager" type="spawner" 
+        respawn="false" output="screen" ns="/ur10e_robot"
+        args="joint_state_controller
+              platform_controller
+              arm_controller
+              gripper_controller"/>
+
+  <!-- Convert joint states to TF transforms for visualization -->
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"
+        respawn="false" output="screen">
+    <remap from="/joint_states" to="/ur10e_robot/joint_states" />
+  </node>
+
+  <!-- Optional: Launch RViz for visualization -->
+  <arg name="rviz" default="true" doc="Launch RViz"/>
+  <node if="$(arg rviz)" name="rviz" pkg="rviz" type="rviz"
+        args="-d $(find pkg01)/config/rvizconfig01.rviz"/>
+
+</launch>

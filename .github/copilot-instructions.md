@@ -1,24 +1,48 @@
-# Copilot Instructions for UR10e Gazebo Simulation Project
+# Copilot Instructions for UR10e Mobile Manipulation System
 
 ## Project Overview
-This is a **ROS (Robot Operating System) Catkin workspace** for simulating a **Universal Robots UR10e manipulator with a custom gripper** in Gazebo. The workspace follows standard ROS package structure with URDF/xacro robot descriptions, Gazebo simulation support, and ros_control integration.
+This is a **ROS (Robot Operating System) Catkin workspace** for simulating a **Universal Robots UR10e manipulator with custom gripper mounted on a 10-meter linear mobile platform** in Gazebo. The system combines mobile manipulation with MoveIt motion planning for extended workspace operations.
 
 **Workspace Root**: `/home/vboxuser/lattebot_ws2/src`  
-**Primary Package**: `pkg01` (contains UR10e robot model and simulation files)
+**Primary Packages**: 
+- `pkg01` - Robot model, platform, controllers, and simulation
+- `ur10e_moveit_config` - MoveIt planning configuration
 
 ## Architecture & Key Components
 
+### Complete System Structure
+```
+world_platform (fixed ground reference, MUST have inertial properties)
+  └─ platform_joint (prismatic, 0-10m X-axis motion)
+      └─ platform_base (50kg moving platform)
+          └─ robot_mount (mounting plate)
+              └─ base_link (UR10e arm base)
+                  └─ [6-DOF arm: shoulder_pan → shoulder_lift → elbow → wrist_1/2/3]
+                      └─ flange
+                          └─ gripper_base (2-finger gripper with mimic joints)
+```
+
 ### Robot Model (URDF/Xacro)
-- **`urdf/ur10e.urdf.xacro`**: Main robot description with 6-DOF UR10e arm
-  - Contains full kinematic chain with DH parameters (d1=0.1807, a2=0.6127, a3=0.57155, etc.)
-  - Includes inertial properties, collision meshes, and visual meshes
-  - **Critical**: Uses `package://pkg01/urdf/meshes/ur10e/` for mesh paths
-  - Integrates gripper via xacro include: `<xacro:include filename="$(find pkg01)/urdf/simple_gripper.urdf.xacro"/>`
+- **`urdf/ur10e.urdf.xacro`**: Main robot description orchestrating all components
+  - Includes platform: `<xacro:include filename="$(find pkg01)/urdf/mobile_platform.urdf.xacro"/>`
+  - Includes gripper: `<xacro:include filename="$(find pkg01)/urdf/simple_gripper.urdf.xacro"/>`
+  - **Critical ordering**: Platform macro must be instantiated BEFORE connecting base_link
+  - Uses `package://pkg01/urdf/meshes/ur10e/` for mesh paths (never absolute paths)
   
+- **`urdf/mobile_platform.urdf.xacro`**: Linear motion platform (0-10 meters)
+  - **CRITICAL**: `world_platform` link MUST have inertial properties (even if static)
+    - Without inertial properties, ros_control parser fails: "joint not in gazebo model" error
+    - Use minimal values: `mass="0.001"`, `inertia="0.001"` for virtual/fixed links
+  - `platform_joint`: Prismatic joint with `PositionJointInterface`
+  - Gazebo static property applied to `world_platform` only (inside macro)
+  - Self-contained with transmission for ros_control integration
+
 - **`urdf/simple_gripper.urdf.xacro`**: Custom 2-finger gripper macro
   - Attachable to UR10e flange via `gripper_mount` fixed joint
-  - Uses **mimic joint plugin** for symmetric finger movement (right finger mirrors left)
-  - **Important**: Gripper uses `EffortJointInterface` (not PositionJointInterface)
+  - Uses **mimic joint plugin** (`libroboticsgroup_gazebo_mimic_joint_plugin.so`)
+    - Control only `left_finger_joint` → `right_finger_joint` mirrors automatically
+    - Multiplier=1.0, offset=0.0 for symmetric gripping
+  - **Important**: Gripper uses `EffortJointInterface` (NOT PositionJointInterface)
 
 ### Gazebo Integration Pattern
 **Key Convention**: Robot components require matching transmissions and controllers:
@@ -34,11 +58,35 @@ This is a **ROS (Robot Operating System) Catkin workspace** for simulating a **U
 **Common Error**: Mismatched interfaces cause "Could not find joint in hardware_interface" errors.
 
 ### Controller Configuration (`controller/ur10e_controllers.yaml`)
-- Namespaced under `ur10e_robot:` (matches `<robotNamespace>` in URDF gazebo plugin)
-- Three controllers defined:
+- **Namespace**: All controllers under `ur10e_robot:` (matches `<robotNamespace>` in URDF gazebo plugin)
+- **Four controllers** (all spawned together):
   1. `joint_state_controller` - publishes to `/ur10e_robot/joint_states`
-  2. `arm_controller` - 6 arm joints with position control (P=1000.0, D=10.0)
-  3. `gripper_controller` - left finger with effort control (P=500.0, I=50.0, D=10.0)
+  2. `platform_controller` - linear motion (0-10m, PositionJointInterface, P=500, I=10, D=50)
+  3. `arm_controller` - 6 arm joints (PositionJointInterface, P=1000, D=10)
+  4. `gripper_controller` - left finger only (EffortJointInterface, P=500, I=50, D=10)
+- **Action servers**: Each controller exposes `follow_joint_trajectory` action for trajectory execution
+
+### Gazebo Worlds & Custom Models
+- **`world/farm.world`**: Custom SDF world with bucket model
+  - Includes: sun, ground_plane, bucket at (2, 2, 2)
+  - Requires `GAZEBO_MODEL_PATH` set to `$(find pkg01)/models` in launch file
+- **`models/bucket/`**: Custom Gazebo model structure
+  - `model.config` - metadata (name, version, sdf pointer)
+  - `model.sdf` - SDF definition (links, visuals, collisions)
+  - `meshes/Bucket.dae` - 3D mesh file
+  - **Pattern**: Models referenced in worlds use `model://bucket` URI scheme
+
+### MoveIt Integration
+- **Package**: `ur10e_moveit_config` (auto-generated by MoveIt Setup Assistant)
+- **SRDF** (`ur10e.srdf`): Semantic robot description
+  - Planning group: `manipulator` (base_link → flange chain, excludes platform)
+  - End effector: `gripper` group
+  - Virtual joint: `world_platform` to `base_link` (NOT "world" frame)
+  - Passive joint: `right_finger_joint` (mimic joint not actuated directly)
+  - Collision disable rules for platform-robot adjacency
+- **Launch pattern**: `gazebo_moveit.launch` combines Gazebo + MoveIt + joint_state relay
+  - Uses `topic_tools/relay` to forward `/ur10e_robot/joint_states` → `/joint_states`
+  - Platform joint visible in joint states but not part of arm planning group
 
 ## Developer Workflows
 
@@ -49,10 +97,19 @@ catkin_make
 source devel/setup.bash
 ```
 
-### Launch Simulation
+### Launch Simulation Scenarios
 ```bash
-# Full simulation with Gazebo + RViz
+# Standard Gazebo simulation with empty world
 roslaunch pkg01 gazebo_ur10e.launch
+
+# Farm world with custom bucket model
+roslaunch pkg01 gazebo_farm.launch
+
+# With MoveIt motion planning
+roslaunch pkg01 gazebo_moveit.launch
+
+# Platform-only demo (automated movement sequence)
+roslaunch pkg01 gazebo_platform_demo.launch
 
 # Without RViz
 roslaunch pkg01 gazebo_ur10e.launch rviz:=false
@@ -66,16 +123,35 @@ roslaunch pkg01 gazebo_ur10e.launch paused:=true
 roslaunch pkg01 ur10e.launch  # Uses joint_state_publisher_gui
 ```
 
+### Control Platform Motion
+```bash
+# Automated demo sequence (0m → 2.5m → 5m → 7.5m → 10m → return)
+rosrun pkg01 demo_platform.py
+
+# Move to specific position (0.0 to 10.0 meters)
+rosrun pkg01 move_platform.py _position:=5.0 _duration:=3.0
+
+# Verify platform integration
+rosrun pkg01 verify_platform.py
+
+# Add RViz range markers for platform visualization
+rosrun pkg01 platform_range_markers.py
+```
+
 ### Debugging Controllers
 ```bash
-# List loaded controllers
+# List loaded controllers (should show 4: joint_state, platform, arm, gripper)
 rosservice call /ur10e_robot/controller_manager/list_controllers
 
-# Check joint states
+# Check joint states (includes platform_joint position)
 rostopic echo /ur10e_robot/joint_states
 
 # Monitor controller topics
 rostopic list | grep ur10e_robot
+
+# Controller action servers
+rostopic info /ur10e_robot/platform_controller/follow_joint_trajectory
+rostopic info /ur10e_robot/arm_controller/follow_joint_trajectory
 ```
 
 ## Project-Specific Conventions
@@ -87,13 +163,29 @@ pkg01/
 ├── launch/        # Two patterns: gazebo_*.launch (sim) vs *.launch (viz only)
 ├── controller/    # YAML configs namespaced by robot name
 ├── config/        # RViz configs
+├── scripts/       # Python control scripts (move_platform.py, demo_platform.py, etc.)
+├── world/         # Gazebo world files (.world SDF format)
+├── models/        # Custom Gazebo models (bucket, etc.) with model.config + model.sdf
 └── meshes/        # STL/DAE files organized by robot model
 ```
+
+### Launch File Patterns
+- **Gazebo simulation**: `gazebo_*.launch` (spawns robot, loads controllers, optional RViz)
+- **Visualization only**: `*.launch` (no Gazebo, uses joint_state_publisher_gui)
+- **MoveIt integration**: `gazebo_moveit.launch` (Gazebo + MoveIt + joint_state relay)
+- **Custom worlds**: Set `GAZEBO_MODEL_PATH` env var, specify world file path
+
+### Python Scripts Convention
+All Python scripts in `scripts/` are executable and use ROS action clients:
+- Import pattern: `actionlib`, `control_msgs.msg`, `trajectory_msgs.msg`
+- Action server endpoint: `/ur10e_robot/<controller_name>/follow_joint_trajectory`
+- Position limits enforced: platform (0-10m), arm (joint limits), gripper (effort-based)
 
 ### Xacro Usage Pattern
 - Always use `$(find pkg01)` for package-relative paths
 - Process with: `$(find xacro)/xacro --inorder <file>.urdf.xacro`
 - Gripper attachment: Mount to `flange` link (not `tool0` or `ee_link`)
+- Macro ordering critical: Platform macro → robot mounting → gripper
 
 ### Gazebo Plugin Requirements
 1. **gazebo_ros_control plugin** in URDF sets namespace
@@ -128,14 +220,34 @@ All mesh paths use ROS package URLs:
 ```
 Never use absolute paths - breaks portability and roslaunch.
 
+### Custom Gazebo Models
+Models in `models/` directory require specific structure:
+```
+bucket/
+├── model.config    # Metadata: name, version, SDF pointer
+├── model.sdf       # SDF definition with links, visuals, collisions
+└── meshes/
+    └── Bucket.dae  # 3D mesh referenced by model.sdf
+```
+- Launch files must set: `<env name="GAZEBO_MODEL_PATH" value="$(find pkg01)/models:..."/>`
+- World files reference with: `<uri>model://bucket</uri>`
+
 ## Common Pitfalls
 1. **Forgetting to source workspace**: Always `source devel/setup.bash` after building
 2. **Interface mismatch**: Check transmission vs controller type when joints don't load
 3. **Namespace errors**: Controller YAML namespace must match URDF `<robotNamespace>`
 4. **Missing dependencies**: Run `rosdep install --from-paths src --ignore-src -r -y` for missing packages
+5. **Missing inertial properties**: All links MUST have inertial properties, even static/dummy links
+   - Use minimal values: `mass="0.001"`, `inertia="0.001"` for virtual links
+   - Without inertial: "joint not in gazebo model" error from ros_control parser
+6. **Xacro macro ordering**: Include platform macro BEFORE connecting base_link to robot_mount
+7. **Gazebo model paths**: Set `GAZEBO_MODEL_PATH` env var in launch files for custom models
 
 ## Testing New Features
 1. Test URDF validity: `check_urdf <(xacro ur10e.urdf.xacro)`
 2. Visualize without Gazebo first: `roslaunch pkg01 ur10e.launch`
 3. Check for Gazebo errors: Look for controller loading failures in terminal
 4. Verify joint control: Use `rqt` or publish to action server: `/ur10e_robot/arm_controller/follow_joint_trajectory`
+5. Test platform integration: `rosrun pkg01 verify_platform.py` before launching full simulation
+
+````

@@ -16,7 +16,15 @@
     </material>
 
     <!-- Fixed world link (ground reference) -->
-    <link name="${prefix}world_platform"/>
+    <link name="${prefix}world_platform">
+      <inertial>
+        <mass value="0.001"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0.001" ixy="0.0" ixz="0.0"
+                 iyy="0.001" iyz="0.0"
+                 izz="0.001"/>
+      </inertial>
+    </link>
 
     <!-- Platform base link (moves along rail) -->
     <link name="${prefix}platform_base">
@@ -87,7 +95,11 @@
       <origin xyz="0 0 ${platform_height}" rpy="0 0 0"/>
     </joint>
 
-    <!-- Gazebo properties for the platform -->
+    <!-- Gazebo properties -->
+    <gazebo reference="${prefix}world_platform">
+      <static>true</static>
+    </gazebo>
+
     <gazebo reference="${prefix}platform_base">
       <material>Gazebo/DarkGrey</material>
       <mu1>0.8</mu1>
