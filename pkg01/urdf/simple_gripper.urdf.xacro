@@ -70,20 +70,20 @@
     <!-- Left Finger -->
     <link name="${prefix}left_finger">
       <visual>
-        <origin xyz="0 0 0.045" rpy="0 0 0"/>
+        <origin xyz="0 0 0.045" rpy="0 0 ${-PI/2.0}"/>
         <geometry>
           <box size="0.015 0.025 0.09"/>
         </geometry>
         <material name="${prefix}gripper_dark"/>
       </visual>
       <collision>
-        <origin xyz="0 0 0.045" rpy="0 0 0"/>
+        <origin xyz="0 0 0.045" rpy="0 0 ${-PI/2.0}"/>
         <geometry>
           <box size="0.015 0.025 0.09"/>
         </geometry>
       </collision>
       <inertial>
-        <origin xyz="0 0 0.045" rpy="0 0 0"/>
+        <origin xyz="0 0 0.045" rpy="0 0 ${-PI/2.0}"/>
         <mass value="0.03"/>
         <inertia ixx="0.00001" ixy="0.0" ixz="0.0" 
                  iyy="0.00001" iyz="0.0" 
@@ -91,29 +91,145 @@
       </inertial>
     </link>
 
+    <link name="${prefix}left_finger_hook">
+      <visual>
+        <origin xyz="0 -0.01 0" rpy="0 0 ${-PI/2.0}"/>
+        <geometry>
+          <box size="0.03 0.025 0.01"/>
+        </geometry>
+        <material name="${prefix}gripper_dark"/>
+      </visual>
+      <collision>
+        <origin xyz="0 -0.01 0" rpy="0 0 ${-PI/2.0}"/>
+        <geometry>
+          <box size="0.03 0.025 0.01"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="0 -0.01 0" rpy="0 0 ${-PI/2.0}"/>
+        <mass value="0.01"/>
+        <inertia ixx="0.000005" ixy="0.0" ixz="0.0" 
+                 iyy="0.000005" iyz="0.0" 
+                 izz="0.000005"/>
+      </inertial>
+    </link>
+
+    <link name="${prefix}left_finger_hook_parallel">
+      <visual>
+        <origin xyz="0 0 -0.015" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.025 0.002 0.04"/>
+        </geometry>
+        <material name="${prefix}gripper_dark"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 -0.015" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.025 0.002 0.06"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="0 0 -0.015" rpy="0 0 0"/>
+        <mass value="0.01"/>
+        <inertia ixx="0.000005" ixy="0.0" ixz="0.0" 
+                 iyy="0.000005" iyz="0.0" 
+                 izz="0.000005"/>
+      </inertial>
+    </link>
+
+    <joint name="${prefix}left_finger_hook_horizontal_joint" type="fixed">
+      <parent link="${prefix}left_finger"/>
+      <child link="${prefix}left_finger_hook"/>
+      <origin xyz="0 0 0.09" rpy="0 0 0"/>
+    </joint>
+
+    <joint name="${prefix}left_finger_hook_parallel_joint" type="fixed">
+      <parent link="${prefix}left_finger_hook"/>
+      <child link="${prefix}left_finger_hook_parallel"/>
+      <origin xyz="0 -0.025 0" rpy="0 0 0"/>
+    </joint>
+
     <!-- Right Finger -->
     <link name="${prefix}right_finger">
       <visual>
-        <origin xyz="0 0 0.045" rpy="0 0 0"/>
+        <origin xyz="0 0 0.045" rpy="0 0 ${-PI/2.0}"/>
         <geometry>
           <box size="0.015 0.025 0.09"/>
         </geometry>
         <material name="${prefix}gripper_dark"/>
       </visual>
       <collision>
-        <origin xyz="0 0 0.045" rpy="0 0 0"/>
+        <origin xyz="0 0 0.045" rpy="0 0 ${-PI/2.0}"/>
         <geometry>
           <box size="0.015 0.025 0.09"/>
         </geometry>
       </collision>
       <inertial>
-        <origin xyz="0 0 0.045" rpy="0 0 0"/>
+        <origin xyz="0 0 0.045" rpy="0 0 ${-PI/2.0}"/>
         <mass value="0.03"/>
         <inertia ixx="0.00001" ixy="0.0" ixz="0.0" 
                  iyy="0.00001" iyz="0.0" 
                  izz="0.00001"/>
       </inertial>
     </link>
+
+    <link name="${prefix}right_finger_hook">
+      <visual>
+        <origin xyz="0 0.01 0" rpy="0 0 ${-PI/2.0}"/>
+        <geometry>
+          <box size="0.03 0.025 0.01"/>
+        </geometry>
+        <material name="${prefix}gripper_dark"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0.01 0" rpy="0 0 ${-PI/2.0}"/>
+        <geometry>
+          <box size="0.03 0.025 0.01"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="0 0.01 0" rpy="0 0 ${-PI/2.0}"/>
+        <mass value="0.01"/>
+        <inertia ixx="0.000005" ixy="0.0" ixz="0.0" 
+                 iyy="0.000005" iyz="0.0" 
+                 izz="0.000005"/>
+      </inertial>
+    </link>
+
+    <link name="${prefix}right_finger_hook_parallel">
+      <visual>
+        <origin xyz="0 0 -0.015" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.025 0.002 0.04"/>
+        </geometry>
+        <material name="${prefix}gripper_dark"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 -0.015" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.025 0.002 0.06"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="0 0 -0.015" rpy="0 0 0"/>
+        <mass value="0.01"/>
+        <inertia ixx="0.000005" ixy="0.0" ixz="0.0" 
+                 iyy="0.000005" iyz="0.0" 
+                 izz="0.000005"/>
+      </inertial>
+    </link>
+
+    <joint name="${prefix}right_finger_hook_horizontal_joint" type="fixed">
+      <parent link="${prefix}right_finger"/>
+      <child link="${prefix}right_finger_hook"/>
+      <origin xyz="0 0 0.09" rpy="0 0 0"/>
+    </joint>
+
+    <joint name="${prefix}right_finger_hook_parallel_joint" type="fixed">
+      <parent link="${prefix}right_finger_hook"/>
+      <child link="${prefix}right_finger_hook_parallel"/>
+      <origin xyz="0 0.025 0" rpy="0 0 0"/>
+    </joint>
 
     <!-- Gripper Tip Link (virtual link for grasping point) -->
     <link name="${prefix}gripper_tip">
@@ -141,7 +257,7 @@
     <joint name="${prefix}left_finger_joint" type="prismatic">
       <parent link="${prefix}gripper_palm"/>
       <child link="${prefix}left_finger"/>
-      <origin xyz="0 0.0125 0.04" rpy="0 0 0"/>
+      <origin xyz="-0.015 0.0175 0.04" rpy="0 0 0"/>
       <axis xyz="0 1 0"/>
       <limit lower="-0.0125" upper="0.025" effort="100" velocity="0.5"/>
       <dynamics damping="1.0" friction="0.5"/>
@@ -152,7 +268,7 @@
     <joint name="${prefix}right_finger_joint" type="prismatic">
       <parent link="${prefix}gripper_palm"/>
       <child link="${prefix}right_finger"/>
-      <origin xyz="0 -0.0125 0.04" rpy="0 0 0"/>
+      <origin xyz="0.015 -0.0175 0.04" rpy="0 0 0"/>
       <axis xyz="0 -1 0"/>
       <limit lower="-0.0125" upper="0.025" effort="100" velocity="0.5"/>
       <dynamics damping="1.0" friction="0.5"/>
@@ -189,6 +305,46 @@
     </gazebo>
 
     <gazebo reference="${prefix}right_finger">
+      <material>Gazebo/DarkGrey</material>
+      <mu1>2.0</mu1>
+      <mu2>2.0</mu2>
+      <kp>1000000.0</kp>
+      <kd>100.0</kd>
+      <minDepth>0.001</minDepth>
+      <maxVel>0.1</maxVel>
+    </gazebo>
+
+    <gazebo reference="${prefix}left_finger_hook">
+      <material>Gazebo/DarkGrey</material>
+      <mu1>2.0</mu1>
+      <mu2>2.0</mu2>
+      <kp>1000000.0</kp>
+      <kd>100.0</kd>
+      <minDepth>0.001</minDepth>
+      <maxVel>0.1</maxVel>
+    </gazebo>
+
+    <gazebo reference="${prefix}right_finger_hook">
+      <material>Gazebo/DarkGrey</material>
+      <mu1>2.0</mu1>
+      <mu2>2.0</mu2>
+      <kp>1000000.0</kp>
+      <kd>100.0</kd>
+      <minDepth>0.001</minDepth>
+      <maxVel>0.1</maxVel>
+    </gazebo>
+
+    <gazebo reference="${prefix}left_finger_hook_parallel">
+      <material>Gazebo/DarkGrey</material>
+      <mu1>2.0</mu1>
+      <mu2>2.0</mu2>
+      <kp>1000000.0</kp>
+      <kd>100.0</kd>
+      <minDepth>0.001</minDepth>
+      <maxVel>0.1</maxVel>
+    </gazebo>
+
+    <gazebo reference="${prefix}right_finger_hook_parallel">
       <material>Gazebo/DarkGrey</material>
       <mu1>2.0</mu1>
       <mu2>2.0</mu2>

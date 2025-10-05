@@ -34,12 +34,12 @@
         <joint name="wrist_3_joint" value="0"/>
     </group_state>
     <group_state name="grasp" group="manipulator">
-        <joint name="elbow_joint" value="1.9236314878247747"/>
-        <joint name="shoulder_lift_joint" value="0.19170933474806962"/>
-        <joint name="shoulder_pan_joint" value="2.928603158002714"/>
-        <joint name="wrist_1_joint" value="-0.5371822524679857"/>
-        <joint name="wrist_2_joint" value="-1.5742945874142178"/>
-        <joint name="wrist_3_joint" value="1.2350078723059505"/>
+        <joint name="elbow_joint" value="2.0112724715239185"/>
+        <joint name="shoulder_lift_joint" value="0.13108098302543159"/>
+        <joint name="shoulder_pan_joint" value="2.938071588769734"/>
+        <joint name="wrist_1_joint" value="-0.5641332804195667"/>
+        <joint name="wrist_2_joint" value="-1.5743949912404647"/>
+        <joint name="wrist_3_joint" value="1.2446446224440155"/>
     </group_state>
     <group_state name="transport" group="manipulator">
         <joint name="elbow_joint" value="2.3758"/>
@@ -51,11 +51,11 @@
     </group_state>
     <group_state name="place" group="manipulator">
         <joint name="elbow_joint" value="1.627"/>
-        <joint name="shoulder_lift_joint" value="0.4873"/>
-        <joint name="shoulder_pan_joint" value="-1.453"/>
-        <joint name="wrist_1_joint" value="-0.5548"/>
-        <joint name="wrist_2_joint" value="-1.5745"/>
-        <joint name="wrist_3_joint" value="1.4846"/>
+        <joint name="shoulder_lift_joint" value="0.13108098302543159"/>
+        <joint name="shoulder_pan_joint" value="2.938071588769734"/>
+        <joint name="wrist_1_joint" value="-0.5641332804195667"/>
+        <joint name="wrist_2_joint" value="-1.5743949912404647"/>
+        <joint name="wrist_3_joint" value="1.2446446224440155"/>
     </group_state>
     <group_state name="lift" group="manipulator">
         <joint name="elbow_joint" value="0.6676"/>
@@ -141,4 +141,32 @@
     <disable_collisions link1="wrist_1_link" link2="wrist_2_link" reason="Adjacent"/>
     <disable_collisions link1="wrist_1_link" link2="wrist_3_link" reason="Never"/>
     <disable_collisions link1="wrist_2_link" link2="wrist_3_link" reason="Adjacent"/>
+    
+    <!-- Additional collision disables for gripper hook links -->
+    <disable_collisions link1="left_finger_hook" link2="left_finger" reason="Adjacent"/>
+    <disable_collisions link1="left_finger_hook_parallel" link2="left_finger_hook" reason="Adjacent"/>
+    <disable_collisions link1="left_finger_hook_parallel" link2="left_finger" reason="Never"/>
+    <disable_collisions link1="right_finger_hook" link2="right_finger" reason="Adjacent"/>
+    <disable_collisions link1="right_finger_hook_parallel" link2="right_finger_hook" reason="Adjacent"/>
+    <disable_collisions link1="right_finger_hook_parallel" link2="right_finger" reason="Never"/>
+    
+    <!-- Disable collisions between left and right gripper hooks -->
+    <disable_collisions link1="left_finger_hook" link2="right_finger_hook" reason="Never"/>
+    <disable_collisions link1="left_finger_hook" link2="right_finger_hook_parallel" reason="Never"/>
+    <disable_collisions link1="left_finger_hook_parallel" link2="right_finger_hook" reason="Never"/>
+    <disable_collisions link1="left_finger_hook_parallel" link2="right_finger_hook_parallel" reason="Never"/>
+    <disable_collisions link1="left_finger_hook" link2="right_finger" reason="Never"/>
+    <disable_collisions link1="right_finger_hook" link2="left_finger" reason="Never"/>
+    <disable_collisions link1="left_finger_hook_parallel" link2="right_finger" reason="Never"/>
+    <disable_collisions link1="right_finger_hook_parallel" link2="left_finger" reason="Never"/>
+    
+    <!-- Disable collisions between gripper hooks and palm/base -->
+    <disable_collisions link1="left_finger_hook" link2="gripper_palm" reason="Never"/>
+    <disable_collisions link1="left_finger_hook_parallel" link2="gripper_palm" reason="Never"/>
+    <disable_collisions link1="right_finger_hook" link2="gripper_palm" reason="Never"/>
+    <disable_collisions link1="right_finger_hook_parallel" link2="gripper_palm" reason="Never"/>
+    <disable_collisions link1="left_finger_hook" link2="gripper_base_link" reason="Never"/>
+    <disable_collisions link1="left_finger_hook_parallel" link2="gripper_base_link" reason="Never"/>
+    <disable_collisions link1="right_finger_hook" link2="gripper_base_link" reason="Never"/>
+    <disable_collisions link1="right_finger_hook_parallel" link2="gripper_base_link" reason="Never"/>
 </robot>

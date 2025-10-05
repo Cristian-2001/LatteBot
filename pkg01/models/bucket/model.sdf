@@ -31,19 +31,203 @@
         <geometry>
           <cylinder>
             <radius>0.125</radius>
-            <length>0.35</length>
+            <length>0.38</length>
           </cylinder>
         </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>1.5</mu>
+              <mu2>1.5</mu2>
+            </ode>
+          </friction>
+          <contact>
+            <ode>
+              <kp>1000000.0</kp>
+              <kd>100.0</kd>
+              <max_vel>0.1</max_vel>
+              <min_depth>0.001</min_depth>
+            </ode>
+          </contact>
+        </surface>
       </collision>
       
       <!-- Simplified collision: Box for handle (easy to grasp) -->
-      <collision name="bucket_handle">
+      <collision name="bucket_handle_horiz_mid">
         <pose>0 0.503 0 0 0 0</pose>
         <geometry>
           <box>
-            <size>0.1 0.015 0.015</size>
+            <size>0.050 0.0075 0.0075</size>
           </box>
         </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>2.0</mu>
+              <mu2>2.0</mu2>
+            </ode>
+          </friction>
+          <contact>
+            <ode>
+              <kp>1000000.0</kp>
+              <kd>100.0</kd>
+              <max_vel>0.1</max_vel>
+              <min_depth>0.001</min_depth>
+            </ode>
+          </contact>
+        </surface>
+      </collision>
+
+      <!--Handle negative x (d=down, u=up)-->
+      <collision name="bucket_handle_vertical_dn">
+        <pose>-0.125 0.4125 0 0 0 1.5707963267948966</pose>
+        <geometry>
+          <box>
+            <size>0.115 0.0075 0.0075</size>
+          </box>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>2.0</mu>
+              <mu2>2.0</mu2>
+            </ode>
+          </friction>
+          <contact>
+            <ode>
+              <kp>1000000.0</kp>
+              <kd>100.0</kd>
+              <max_vel>0.1</max_vel>
+              <min_depth>0.001</min_depth>
+            </ode>
+          </contact>
+        </surface>
+      </collision>
+
+      <collision name="bucket_handle_horiz_n">
+        <pose>-0.075 0.465 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.100 0.0075 0.0075</size>
+          </box>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>2.0</mu>
+              <mu2>2.0</mu2>
+            </ode>
+          </friction>
+          <contact>
+            <ode>
+              <kp>1000000.0</kp>
+              <kd>100.0</kd>
+              <max_vel>0.1</max_vel>
+              <min_depth>0.001</min_depth>
+            </ode>
+          </contact>
+        </surface>
+      </collision>
+
+      <collision name="bucket_handle_vertical_un">
+        <pose>-0.025 0.484 0 0 0 1.5707963267948966</pose>
+        <geometry>
+          <box>
+            <size>0.038 0.0075 0.0075</size>
+          </box>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>2.0</mu>
+              <mu2>2.0</mu2>
+            </ode>
+          </friction>
+          <contact>
+            <ode>
+              <kp>1000000.0</kp>
+              <kd>100.0</kd>
+              <max_vel>0.1</max_vel>
+              <min_depth>0.001</min_depth>
+            </ode>
+          </contact>
+        </surface>
+      </collision>
+
+      <!--Handle positive x (d=down, u=up)-->
+      <collision name="bucket_handle_vertical_dp">
+        <pose>0.125 0.4125 0 0 0 1.5707963267948966</pose>
+        <geometry>
+          <box>
+            <size>0.115 0.0075 0.0075</size>
+          </box>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>2.0</mu>
+              <mu2>2.0</mu2>
+            </ode>
+          </friction>
+          <contact>
+            <ode>
+              <kp>1000000.0</kp>
+              <kd>100.0</kd>
+              <max_vel>0.1</max_vel>
+              <min_depth>0.001</min_depth>
+            </ode>
+          </contact>
+        </surface>
+      </collision>
+
+      <collision name="bucket_handle_horiz_p">
+        <pose>0.075 0.465 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.100 0.0075 0.0075</size>
+          </box>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>2.0</mu>
+              <mu2>2.0</mu2>
+            </ode>
+          </friction>
+          <contact>
+            <ode>
+              <kp>1000000.0</kp>
+              <kd>100.0</kd>
+              <max_vel>0.1</max_vel>
+              <min_depth>0.001</min_depth>
+            </ode>
+          </contact>
+        </surface>
+      </collision>
+
+      <collision name="bucket_handle_vertical_up">
+        <pose>0.025 0.484 0 0 0 1.5707963267948966</pose>
+        <geometry>
+          <box>
+            <size>0.038 0.0075 0.0075</size>
+          </box>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>2.0</mu>
+              <mu2>2.0</mu2>
+            </ode>
+          </friction>
+          <contact>
+            <ode>
+              <kp>1000000.0</kp>
+              <kd>100.0</kd>
+              <max_vel>0.1</max_vel>
+              <min_depth>0.001</min_depth>
+            </ode>
+          </contact>
+        </surface>
       </collision>
     </link>
   </model>
