@@ -65,9 +65,17 @@
         <joint name="wrist_2_joint" value="-1.5745"/>
         <joint name="wrist_3_joint" value="1.4846"/>
     </group_state>
+    <group_state name="intermediate" group="manipulator">
+        <joint name="elbow_joint" value="1.8644542891597276"/>
+        <joint name="shoulder_lift_joint" value="-0.2045305086067195"/>
+        <joint name="shoulder_pan_joint" value="2.8753892917186707"/>
+        <joint name="wrist_1_joint" value="-0.08207317288009897"/>
+        <joint name="wrist_2_joint" value="-1.5746959530677298"/>
+        <joint name="wrist_3_joint" value="1.1820511678324657"/>
+    </group_state>
     <group_state name="open" group="gripper">
-        <joint name="left_finger_joint" value="0.025"/>
-        <joint name="right_finger_joint" value="0.025"/>
+        <joint name="left_finger_joint" value="0.05"/>
+        <joint name="right_finger_joint" value="0.05"/>
     </group_state>
     <group_state name="close" group="gripper">
         <joint name="left_finger_joint" value="0"/>

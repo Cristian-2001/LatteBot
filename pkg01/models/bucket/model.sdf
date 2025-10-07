@@ -1,14 +1,18 @@
 <sdf version="1.6">
   <model name="bucket">
     <static>false</static>
+    <self_collide>true</self_collide>
     <link name="link">
       <pose>0 0 0 0 0 0</pose>
+      <gravity>true</gravity>
+      <self_collide>true</self_collide>
       <inertial>
-        <mass>0.5</mass>
+        <mass>2.0</mass>  <!-- Increased mass for better stability -->
         <inertia>
-          <ixx>0.01</ixx>
-          <iyy>0.01</iyy>
-          <izz>0.01</izz>
+          <!-- More realistic inertia for cylinder -->
+          <ixx>0.04</ixx>
+          <iyy>0.04</iyy>
+          <izz>0.03</izz>
           <ixy>0</ixy>
           <ixz>0</ixz>
           <iyz>0</iyz>
@@ -37,68 +41,70 @@
         <surface>
           <friction>
             <ode>
-              <mu>1.5</mu>
-              <mu2>1.5</mu2>
+              <mu>2.5</mu>
+              <mu2>2.5</mu2>
             </ode>
           </friction>
           <contact>
             <ode>
-              <kp>1000000.0</kp>
-              <kd>100.0</kd>
-              <max_vel>0.1</max_vel>
-              <min_depth>0.001</min_depth>
+              <kp>10000000.0</kp>
+              <kd>1000.0</kd>
+              <max_vel>0.01</max_vel>
+              <min_depth>0.0001</min_depth>
             </ode>
           </contact>
         </surface>
       </collision>
       
-      <!-- Simplified collision: Box for handle (easy to grasp) -->
+      <!-- HANDLE COLLISIONS - Thicker boxes for better hook contact -->
+      
+      <!-- Horizontal middle section (top of handle arc) -->
       <collision name="bucket_handle_horiz_mid">
         <pose>0 0.503 0 0 0 0</pose>
         <geometry>
           <box>
-            <size>0.050 0.0075 0.0075</size>
+            <size>0.090 0.015 0.015</size>  <!-- Doubled thickness: 15mm instead of 7.5mm -->
           </box>
         </geometry>
         <surface>
           <friction>
             <ode>
-              <mu>2.0</mu>
-              <mu2>2.0</mu2>
+              <mu>3.0</mu>
+              <mu2>3.0</mu2>
             </ode>
           </friction>
           <contact>
             <ode>
-              <kp>1000000.0</kp>
-              <kd>100.0</kd>
-              <max_vel>0.1</max_vel>
-              <min_depth>0.001</min_depth>
+              <kp>10000000.0</kp>
+              <kd>1000.0</kd>
+              <max_vel>0.01</max_vel>
+              <min_depth>0.0001</min_depth>
             </ode>
           </contact>
         </surface>
       </collision>
 
-      <!--Handle negative x (d=down, u=up)-->
+      <!-- Left side vertical sections -->
       <collision name="bucket_handle_vertical_dn">
         <pose>-0.125 0.4125 0 0 0 1.5707963267948966</pose>
         <geometry>
           <box>
-            <size>0.115 0.0075 0.0075</size>
+            <size>0.115 0.015 0.015</size>  <!-- Doubled thickness -->
           </box>
         </geometry>
         <surface>
           <friction>
             <ode>
-              <mu>2.0</mu>
-              <mu2>2.0</mu2>
+              <mu>3.0</mu>
+              <mu2>3.0</mu2>
             </ode>
           </friction>
           <contact>
             <ode>
-              <kp>1000000.0</kp>
-              <kd>100.0</kd>
-              <max_vel>0.1</max_vel>
-              <min_depth>0.001</min_depth>
+              <kp>10000000.0</kp>
+              <kd>1000.0</kd>
+              <max_vel>0.01</max_vel>
+              <min_depth>0.0001</min_depth>
             </ode>
           </contact>
         </surface>
@@ -108,73 +114,73 @@
         <pose>-0.075 0.465 0 0 0 0</pose>
         <geometry>
           <box>
-            <size>0.100 0.0075 0.0075</size>
+            <size>0.090 0.015 0.015</size>  <!-- Doubled thickness -->
           </box>
         </geometry>
         <surface>
           <friction>
             <ode>
-              <mu>2.0</mu>
-              <mu2>2.0</mu2>
+              <mu>3.0</mu>
+              <mu2>3.0</mu2>
             </ode>
           </friction>
           <contact>
             <ode>
-              <kp>1000000.0</kp>
-              <kd>100.0</kd>
-              <max_vel>0.1</max_vel>
-              <min_depth>0.001</min_depth>
+              <kp>10000000.0</kp>
+              <kd>1000.0</kd>
+              <max_vel>0.01</max_vel>
+              <min_depth>0.0001</min_depth>
             </ode>
           </contact>
         </surface>
       </collision>
 
       <collision name="bucket_handle_vertical_un">
-        <pose>-0.025 0.484 0 0 0 1.5707963267948966</pose>
+        <pose>-0.045 0.484 0 0 0 1.5707963267948966</pose>
         <geometry>
           <box>
-            <size>0.038 0.0075 0.0075</size>
+            <size>0.038 0.015 0.015</size>  <!-- Doubled thickness -->
           </box>
         </geometry>
         <surface>
           <friction>
             <ode>
-              <mu>2.0</mu>
-              <mu2>2.0</mu2>
+              <mu>3.0</mu>
+              <mu2>3.0</mu2>
             </ode>
           </friction>
           <contact>
             <ode>
-              <kp>1000000.0</kp>
-              <kd>100.0</kd>
-              <max_vel>0.1</max_vel>
-              <min_depth>0.001</min_depth>
+              <kp>10000000.0</kp>
+              <kd>1000.0</kd>
+              <max_vel>0.01</max_vel>
+              <min_depth>0.0001</min_depth>
             </ode>
           </contact>
         </surface>
       </collision>
 
-      <!--Handle positive x (d=down, u=up)-->
+      <!-- Right side vertical sections -->
       <collision name="bucket_handle_vertical_dp">
         <pose>0.125 0.4125 0 0 0 1.5707963267948966</pose>
         <geometry>
           <box>
-            <size>0.115 0.0075 0.0075</size>
+            <size>0.115 0.015 0.015</size>  <!-- Doubled thickness -->
           </box>
         </geometry>
         <surface>
           <friction>
             <ode>
-              <mu>2.0</mu>
-              <mu2>2.0</mu2>
+              <mu>3.0</mu>
+              <mu2>3.0</mu2>
             </ode>
           </friction>
           <contact>
             <ode>
-              <kp>1000000.0</kp>
-              <kd>100.0</kd>
-              <max_vel>0.1</max_vel>
-              <min_depth>0.001</min_depth>
+              <kp>10000000.0</kp>
+              <kd>1000.0</kd>
+              <max_vel>0.01</max_vel>
+              <min_depth>0.0001</min_depth>
             </ode>
           </contact>
         </surface>
@@ -184,47 +190,47 @@
         <pose>0.075 0.465 0 0 0 0</pose>
         <geometry>
           <box>
-            <size>0.100 0.0075 0.0075</size>
+            <size>0.090 0.015 0.015</size>  <!-- Doubled thickness -->
           </box>
         </geometry>
         <surface>
           <friction>
             <ode>
-              <mu>2.0</mu>
-              <mu2>2.0</mu2>
+              <mu>3.0</mu>
+              <mu2>3.0</mu2>
             </ode>
           </friction>
           <contact>
             <ode>
-              <kp>1000000.0</kp>
-              <kd>100.0</kd>
-              <max_vel>0.1</max_vel>
-              <min_depth>0.001</min_depth>
+              <kp>10000000.0</kp>
+              <kd>1000.0</kd>
+              <max_vel>0.01</max_vel>
+              <min_depth>0.0001</min_depth>
             </ode>
           </contact>
         </surface>
       </collision>
 
       <collision name="bucket_handle_vertical_up">
-        <pose>0.025 0.484 0 0 0 1.5707963267948966</pose>
+        <pose>0.045 0.484 0 0 0 1.5707963267948966</pose>
         <geometry>
           <box>
-            <size>0.038 0.0075 0.0075</size>
+            <size>0.038 0.015 0.015</size>  <!-- Doubled thickness -->
           </box>
         </geometry>
         <surface>
           <friction>
             <ode>
-              <mu>2.0</mu>
-              <mu2>2.0</mu2>
+              <mu>3.0</mu>
+              <mu2>3.0</mu2>
             </ode>
           </friction>
           <contact>
             <ode>
-              <kp>1000000.0</kp>
-              <kd>100.0</kd>
-              <max_vel>0.1</max_vel>
-              <min_depth>0.001</min_depth>
+              <kp>10000000.0</kp>
+              <kd>1000.0</kd>
+              <max_vel>0.01</max_vel>
+              <min_depth>0.0001</min_depth>
             </ode>
           </contact>
         </surface>

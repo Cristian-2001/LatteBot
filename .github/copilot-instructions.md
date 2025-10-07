@@ -44,7 +44,13 @@ world_platform (fixed ground reference, MUST have inertial properties)
   - **Independent finger control** (both fingers actively controlled, no mimic plugin)
   - Both fingers use `PositionJointInterface` for trajectory control
   - Hook links (`left/right_finger_hook` + `_parallel` variants) extend gripper for handle grasping
-  - **Critical**: All gripper links (fingers + hooks) need Gazebo `<gazebo reference>` blocks with friction properties
+  - **Rigid gripper physics** (prevents bending under load):
+    - Heavy fingers: 0.2kg (was 0.03kg) for rigidity
+    - High damping: 20.0 N⋅s/m (balanced for control)
+    - Implicit spring: 50,000 N/m virtual spring (prevents deflection)
+    - Gravity disabled on gripper links (prevents sag)
+    - High controller gains: P=5000, I=200, D=100
+  - **Critical**: All gripper links (fingers + hooks) need Gazebo `<gazebo reference>` blocks with friction (`mu=3.0`) and implicit spring damper
 
 ### Gazebo Integration Pattern
 **Key Convention**: Robot components require matching transmissions and controllers:
@@ -187,15 +193,30 @@ rostopic info /ur10e_robot/arm_controller/follow_joint_trajectory
 rostopic info /ur10e_robot/gripper_controller/follow_joint_trajectory
 ```
 
+### Testing Gripper Rigidity
+```bash
+# Monitor real-time gripper deflection and bending
+rosrun pkg01 monitor_gripper_rigidity.py
+
+# Test gripper grasp and lift sequence
+rosrun pkg01 test_gripper_lift.py
+
+# Verify gripper setup after launch
+rosrun pkg01 verify_gripper_setup.py
+```
+**Expected**: Deflection < 0.5mm during lift = RIGID ✓, effort 100-500N when holding
+
 ### Gazebo Model Refresh (Critical for Development)
 **Problem**: Changes to `.sdf`, `.world`, or `.xacro` files don't appear after relaunch.  
 **Cause**: Gazebo caches models in memory and `~/.gazebo/models/`.
 
 **Solution**: Use helper script or manual cleanup:
 ```bash
-# Option 1: Use restart script
+# Option 1: Use restart scripts (recommended)
 cd /home/vboxuser/lattebot_ws2/src/pkg01/scripts
-./restart_gazebo_farm.sh
+./restart_gazebo_farm.sh        # Farm world
+./restart_enhanced_gripper.sh   # With gripper physics verification
+./complete_restart.sh           # Full system restart
 
 # Option 2: Manual cleanup
 killall -9 gzserver gzclient
@@ -231,6 +252,20 @@ pkg01/
   - `gazebo_moveit.launch` - Full setup: Gazebo + MoveIt
   - `gazebo_farm.launch` - Has optional `moveit:=true` arg (default enabled)
 - **Custom worlds**: Set `GAZEBO_MODEL_PATH` env var, specify world file path
+
+### MoveIt Named Poses (SRDF Configuration)
+**Adding new named poses**: Edit `ur10e_moveit_config/config/ur10e.srdf`
+- **No other files need modification** - SRDF is loaded at launch time
+- After adding pose: Rebuild workspace (`catkin_make`) and restart MoveIt nodes
+- Named poses available in: MoveIt RViz plugin dropdown, Python API (`move_group.setNamedTarget("pose_name")`)
+- **Pattern**: Group states define joint values for specific configurations
+  ```xml
+  <group_state name="intermediate" group="manipulator">
+    <joint name="shoulder_pan_joint" value="2.0636"/>
+    <!-- ... other joints ... -->
+  </group_state>
+  ```
+- Current poses: `home`, `ready`, `grasp`, `transport`, `place`, `lift`, `intermediate` (manipulator); `open`, `close` (gripper)
 
 ### Python Scripts Convention
 All Python scripts in `scripts/` are executable and use ROS action clients:
@@ -296,21 +331,21 @@ Every `<collision>` in SDF must include:
 <surface>
   <friction>
     <ode>
-      <mu>2.0</mu>      <!-- High friction for handles, 1.5 for body -->
-      <mu2>2.0</mu2>
+      <mu>3.0</mu>      <!-- High friction for handles, matches gripper -->
+      <mu2>3.0</mu2>
     </ode>
   </friction>
   <contact>
     <ode>
-      <kp>1000000.0</kp>  <!-- Contact stiffness -->
-      <kd>100.0</kd>       <!-- Contact damping -->
-      <max_vel>0.1</max_vel>
-      <min_depth>0.001</min_depth>
+      <kp>10000000.0</kp>  <!-- 10M - ultra-stiff contact (prevents pass-through) -->
+      <kd>1000.0</kd>       <!-- 10x damping for stability -->
+      <max_vel>0.01</max_vel>       <!-- Slow correction prevents explosive separation -->
+      <min_depth>0.0001</min_depth>  <!-- 0.1mm - fine detection for thin geometry -->
     </ode>
   </contact>
 </surface>
 ```
-**Why**: Without friction/contact params, objects have near-zero friction (slip through gripper). Match gripper friction (`mu=2.0`) for stable grasping. See `BUCKET_PHYSICS_FIX.md` for details.
+**Why**: Without friction/contact params, objects have near-zero friction (slip through gripper). Ultra-stiff contacts (kp=10M) prevent pass-through during lift. Match gripper friction (`mu=3.0`) for stable grasping. World physics should use 100 ODE solver iterations with ERP=0.9, CFM=0.0 for rigid contacts. See `BUCKET_PASSTHROUGH_FIX.md` for details.
 
 ## Common Pitfalls
 1. **Forgetting to source workspace**: Always `source devel/setup.bash` after building
@@ -330,11 +365,18 @@ Every `<collision>` in SDF must include:
     - Add `<disable_collisions>` entries for new links with adjacent/parent links
     - See `COLLISION_FIX.md` for patterns
 11. **Objects slipping through gripper**: Missing surface physics in model SDF
-    - Add `<surface><friction><ode>` blocks with `mu=2.0` to all collision geometries
-    - Add `<contact>` params: `kp=1000000`, `kd=100`, `max_vel=0.1`, `min_depth=0.001`
+    - Add `<surface><friction><ode>` blocks with `mu=3.0` to all collision geometries
+    - Add ultra-stiff `<contact>` params: `kp=10000000`, `kd=1000`, `max_vel=0.01`, `min_depth=0.0001`
+    - Enable `<self_collide>true</self_collide>` on model and link
+    - See `BUCKET_PASSTHROUGH_FIX.md` for comprehensive solution
 12. **MoveIt cannot execute gripper**: Controller not listed in MoveIt controller configs
     - Update BOTH `ros_controllers.yaml` AND `simple_moveit_controllers.yaml`
     - List ALL joints the controller manages (not just primary joint)
+13. **Gripper fingers bending under load**: Insufficient rigidity in gripper physics
+    - Check finger mass (should be 0.2kg), joint damping (20.0), implicit spring (50,000 N/m)
+    - Verify controller gains: P=5000, I=200, D=100
+    - Use `rosrun pkg01 monitor_gripper_rigidity.py` to track deflection
+    - See `GRIPPER_RIGIDITY_FIX.md` and `RIGID_GRIPPER_QUICKSTART.md`
 
 ## Testing New Features
 1. Test URDF validity: `check_urdf <(xacro ur10e.urdf.xacro)`
