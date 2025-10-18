@@ -1,14 +1,15 @@
 # Copilot Instructions for UR10e Mobile Manipulation System
 
 ## Project Overview
-This is a **ROS (Robot Operating System) Catkin workspace** for simulating a **Universal Robots UR10e manipulator with custom gripper mounted on a 10-meter linear mobile platform** in Gazebo. The system combines mobile manipulation with MoveIt motion planning for extended workspace operations.
+This is a **ROS (Robot Operating System) Catkin workspace** for simulating a **Universal Robots UR10e manipulator with Robotiq 2F-140 gripper mounted on a 10-meter linear mobile platform** in Gazebo. The system combines mobile manipulation with MoveIt motion planning for extended workspace operations.
 
 **Workspace Root**: `/home/vboxuser/lattebot_ws2/src`  
 **Primary Packages**: 
 - `pkg01` - Robot model, platform, controllers, simulation, and custom objects
 - `ur10e_moveit_config` - MoveIt planning configuration (auto-generated, manually tuned)
+- `robotiq/robotiq_2f_140_gripper_visualization` - Robotiq gripper URDF and meshes
 
-**Key Documentation**: See `pkg01/*.md` for troubleshooting guides and fix summaries covering collision tuning, physics parameters, Gazebo caching, and gripper control evolution.
+**Key Documentation**: See `pkg01/claude_explanations/*.md` for troubleshooting guides and fix summaries covering collision tuning, physics parameters, Gazebo caching, gripper integration, and control evolution.
 
 ## Architecture & Key Components
 
@@ -21,14 +22,15 @@ world_platform (fixed ground reference, MUST have inertial properties)
               └─ base_link (UR10e arm base)
                   └─ [6-DOF arm: shoulder_pan → shoulder_lift → elbow → wrist_1/2/3]
                       └─ flange
-                          └─ gripper_base (2-finger gripper with mimic joints)
+                          └─ robotiq_arg2f_base_link (Robotiq 2F-140 gripper with linkage mechanism)
 ```
 
 ### Robot Model (URDF/Xacro)
 - **`urdf/ur10e.urdf.xacro`**: Main robot description orchestrating all components
   - Includes platform: `<xacro:include filename="$(find pkg01)/urdf/mobile_platform.urdf.xacro"/>`
-  - Includes gripper: `<xacro:include filename="$(find pkg01)/urdf/simple_gripper.urdf.xacro"/>`
+  - Includes gripper: `<xacro:include filename="$(find robotiq_2f_140_gripper_visualization)/urdf/robotiq_arg2f_140_model_macro.xacro"/>`
   - **Critical ordering**: Platform macro must be instantiated BEFORE connecting base_link
+  - Gripper mount orientation: `rpy="0 0 ${PI/2}"` to align with flange
   - Uses `package://pkg01/urdf/meshes/ur10e/` for mesh paths (never absolute paths)
   
 - **`urdf/mobile_platform.urdf.xacro`**: Linear motion platform (0-10 meters)
@@ -39,30 +41,26 @@ world_platform (fixed ground reference, MUST have inertial properties)
   - Gazebo static property applied to `world_platform` only (inside macro)
   - Self-contained with transmission for ros_control integration
 
-- **`urdf/simple_gripper.urdf.xacro`**: Custom 2-finger gripper macro with hook geometry
-  - Attachable to UR10e flange via `gripper_mount` fixed joint
-  - **Independent finger control** (both fingers actively controlled, no mimic plugin)
-  - Both fingers use `PositionJointInterface` for trajectory control
-  - Hook links (`left/right_finger_hook` + `_parallel` variants) extend gripper for handle grasping
-  - **Rigid gripper physics** (prevents bending under load):
-    - Heavy fingers: 0.2kg (was 0.03kg) for rigidity
-    - High damping: 20.0 N⋅s/m (balanced for control)
-    - Implicit spring: 50,000 N/m virtual spring (prevents deflection)
-    - Gravity disabled on gripper links (prevents sag)
-    - High controller gains: P=5000, I=200, D=100
-  - **Critical**: All gripper links (fingers + hooks) need Gazebo `<gazebo reference>` blocks with friction (`mu=3.0`) and implicit spring damper
+- **Robotiq 2F-140 Gripper** (`robotiq/robotiq_2f_140_gripper_visualization/urdf/`): Industrial parallel-jaw gripper
+  - Attached to UR10e flange via `gripper_mount` fixed joint
+  - **Single actuated joint** (`finger_joint`, 0.0-0.7 rad) with mimic constraints for realistic linkage mechanism
+  - Complex link structure: base → outer knuckles → outer fingers → inner fingers → finger pads
+  - Mimic joints handled by `libroboticsgroup_gazebo_mimic_joint_plugin.so` (included in Robotiq URDF)
+  - Only `finger_joint` has transmission (`PositionJointInterface`) - other joints follow automatically
+  - **Disabled Robotiq packages** (CATKIN_IGNORE): ethercat, modbus, action_server, 3f grippers (avoid dependencies)
+  - Only visualization package needed for Gazebo simulation
 
 ### Gazebo Integration Pattern
 **Key Convention**: Robot components require matching transmissions and controllers:
 
 1. **Transmissions** (in URDF): Define hardware interface type
    - UR10e arm joints → `hardware_interface/PositionJointInterface`
-   - Gripper fingers → `hardware_interface/PositionJointInterface` (both left + right)
+   - Gripper → `hardware_interface/PositionJointInterface` (single `finger_joint`)
    - Platform joint → `hardware_interface/PositionJointInterface`
    
 2. **Controllers** (in YAML): Must match transmission interface
    - `arm_controller` → `position_controllers/JointTrajectoryController`
-   - `gripper_controller` → `position_controllers/JointTrajectoryController` (controls both fingers)
+   - `gripper_controller` → `position_controllers/JointTrajectoryController` (controls `finger_joint`)
    - `platform_controller` → `position_controllers/JointTrajectoryController`
    
 **Common Error**: Mismatched interfaces cause "Could not find joint in hardware_interface" errors. If changing transmission type, update both URDF and controller YAML.
@@ -73,7 +71,7 @@ world_platform (fixed ground reference, MUST have inertial properties)
   1. `joint_state_controller` - publishes to `/ur10e_robot/joint_states`
   2. `platform_controller` - linear motion (0-10m, PositionJointInterface, P=500, I=10, D=50)
   3. `arm_controller` - 6 arm joints (PositionJointInterface, P=1000, D=10)
-  4. `gripper_controller` - **both fingers** (PositionJointInterface, P=500, I=50, D=10)
+  4. `gripper_controller` - **finger_joint** (PositionJointInterface, P=1000, I=50, D=100)
 - **Action servers**: Each controller exposes `follow_joint_trajectory` action for trajectory execution
 - **MoveIt Integration**: Controllers must be listed in both `ros_controllers.yaml` and `simple_moveit_controllers.yaml` with ALL joints they control
 
@@ -92,13 +90,14 @@ world_platform (fixed ground reference, MUST have inertial properties)
 - **Package**: `ur10e_moveit_config` (auto-generated by MoveIt Setup Assistant)
 - **SRDF** (`ur10e.srdf`): Semantic robot description
   - Planning group: `manipulator` (base_link → flange chain, excludes platform)
-  - End effector: `gripper` group (includes both finger joints)
+  - End effector: `gripper` group (includes `finger_joint` only)
   - Virtual joint: `world_platform` to `base_link` (NOT "world" frame)
   - **Extensive collision disable rules** (~90+ rules) covering:
-    - Gripper hook links with themselves and parent links (Adjacent)
+    - Robotiq gripper linkage (outer/inner knuckles, fingers, pads)
     - Gripper components with arm links (shoulder, upper_arm, forearm, wrists)
     - Platform components with arm links (eliminates false collisions)
-  - Named states: `home` (all zeros), `ready` (shoulder_lift=-1.57)
+  - Named states: `home` (all zeros), `ready` (shoulder_lift=-1.57), `grasp`, `transport`, `place`, `lift`, `intermediate`
+  - Gripper states: `open` (finger_joint=0.0), `close` (finger_joint=0.7)
   - **Common error**: "START_STATE_IN_COLLISION" = missing collision disable rules for new links
 
 **CRITICAL**: MoveIt requires THREE components to work with Gazebo:
@@ -193,18 +192,21 @@ rostopic info /ur10e_robot/arm_controller/follow_joint_trajectory
 rostopic info /ur10e_robot/gripper_controller/follow_joint_trajectory
 ```
 
-### Testing Gripper Rigidity
+### Testing Robotiq Gripper
 ```bash
-# Monitor real-time gripper deflection and bending
-rosrun pkg01 monitor_gripper_rigidity.py
+# Test gripper open/close sequence
+rosrun pkg01 test_robotiq_gripper.py
 
-# Test gripper grasp and lift sequence
-rosrun pkg01 test_gripper_lift.py
+# Monitor joint states (check finger_joint position)
+rostopic echo /ur10e_robot/joint_states | grep finger_joint
 
-# Verify gripper setup after launch
-rosrun pkg01 verify_gripper_setup.py
+# Manual gripper control (0.0=open, 0.7=closed)
+rostopic pub -1 /ur10e_robot/gripper_controller/command trajectory_msgs/JointTrajectory "{
+  joint_names: ['finger_joint'],
+  points: [{positions: [0.5], time_from_start: {secs: 2}}]
+}"
 ```
-**Expected**: Deflection < 0.5mm during lift = RIGID ✓, effort 100-500N when holding
+**Expected**: Mimic joints follow `finger_joint` automatically, smooth opening/closing motion
 
 ### Gazebo Model Refresh (Critical for Development)
 **Problem**: Changes to `.sdf`, `.world`, or `.xacro` files don't appear after relaunch.  
@@ -291,6 +293,19 @@ When adding Gazebo features, update `package.xml` with:
 - `controller_manager`, `ros_control`, `ros_controllers` (control)
 - Specific controller packages: `effort_controllers`, `position_controllers`, `joint_trajectory_controller`
 
+### Robotiq Package Structure
+**Enabled packages** (visualization only, sufficient for Gazebo):
+- `robotiq_2f_140_gripper_visualization` - URDF, meshes, visual models
+- `robotiq_3f_gripper_articulated_msgs` - Message definitions (dependency)
+
+**Disabled packages** (CATKIN_IGNORE to avoid ethercat/hardware dependencies):
+- `robotiq_ethercat`, `robotiq_modbus_rtu`, `robotiq_modbus_tcp` - Hardware communication
+- `robotiq_2f_gripper_control`, `robotiq_2f_gripper_action_server` - Real robot control
+- `robotiq_3f_*` - All 3-finger gripper packages
+- `robotiq_ft_sensor` - Force/torque sensor
+
+**Pattern**: For simulation, only visualization packages needed. Real robot deployment requires enabling hardware packages.
+
 ## Critical Implementation Details
 
 ### Joint Control Interfaces
@@ -300,11 +315,12 @@ When adding Gazebo features, update `package.xml` with:
 - Velocity control → `VelocityJointInterface` + `velocity_controllers/*`
 
 ### Gripper Control
-The gripper uses **independent finger control** (evolved from mimic pattern):
-- Control both `left_finger_joint` AND `right_finger_joint` via `/ur10e_robot/gripper_controller`
-- Both fingers use `PositionJointInterface` for synchronized trajectory following
-- Gripper controller expects both joints in trajectory commands
-- **Hook geometry**: Additional `_hook` and `_hook_parallel` links provide extended grasping surface for handles
+The gripper uses **Robotiq 2F-140 with mimic joints**:
+- Control single `finger_joint` via `/ur10e_robot/gripper_controller`
+- Only `finger_joint` is actuated (0.0=open, 0.7=closed) using `PositionJointInterface`
+- All other joints (outer/inner knuckles, fingers) follow via mimic constraints automatically
+- Mimic plugin (`libroboticsgroup_gazebo_mimic_joint_plugin.so`) handles synchronized motion
+- Gripper controller expects only `finger_joint` in trajectory commands
 
 ### Mesh References
 All mesh paths use ROS package URLs:
@@ -371,12 +387,11 @@ Every `<collision>` in SDF must include:
     - See `BUCKET_PASSTHROUGH_FIX.md` for comprehensive solution
 12. **MoveIt cannot execute gripper**: Controller not listed in MoveIt controller configs
     - Update BOTH `ros_controllers.yaml` AND `simple_moveit_controllers.yaml`
-    - List ALL joints the controller manages (not just primary joint)
-13. **Gripper fingers bending under load**: Insufficient rigidity in gripper physics
-    - Check finger mass (should be 0.2kg), joint damping (20.0), implicit spring (50,000 N/m)
-    - Verify controller gains: P=5000, I=200, D=100
-    - Use `rosrun pkg01 monitor_gripper_rigidity.py` to track deflection
-    - See `GRIPPER_RIGIDITY_FIX.md` and `RIGID_GRIPPER_QUICKSTART.md`
+    - List ALL joints the controller manages (for Robotiq: only `finger_joint`)
+13. **Gripper not moving in Gazebo**: Check if mimic joint plugin is loaded
+    - Verify `libroboticsgroup_gazebo_mimic_joint_plugin.so` in Robotiq URDF
+    - Check Gazebo console for plugin loading errors
+    - Only `finger_joint` should be commanded - others follow automatically
 
 ## Testing New Features
 1. Test URDF validity: `check_urdf <(xacro ur10e.urdf.xacro)`

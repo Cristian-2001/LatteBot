@@ -301,15 +301,17 @@
     <child link="base_link"/>
   </joint>
 
-  <!-- Include gripper macros -->
- <xacro:include filename="$(find pkg01)/urdf/simple_gripper.urdf.xacro"/>
+  <!-- Include Robotiq 2F-140 gripper -->
+  <xacro:include filename="$(find robotiq_2f_140_gripper_visualization)/urdf/robotiq_arg2f_140_model_macro.xacro"/>
 
-  <xacro:simple_gripper prefix=""/>
+  <!-- Instantiate the Robotiq 2F-140 gripper with empty prefix -->
+  <xacro:robotiq_arg2f_140 prefix=""/>
 
+  <!-- Mount gripper to flange -->
   <joint name="gripper_mount" type="fixed">
     <parent link="flange"/>
-    <child link="gripper_base_link"/>
-    <origin xyz="0 0 0" rpy="${-PI/2.0} 0 0"/>
+    <child link="robotiq_arg2f_base_link"/>
+    <origin xyz="0 0 0" rpy="0 0 ${PI/2}"/>
   </joint>
 
   <!-- Gazebo plugin for ROS Control -->

@@ -67,128 +67,71 @@
       </inertial>
     </link>
 
-    <!-- Left Finger -->
+    <!-- Left Finger - Wide blocking design to prevent handle pass-through -->
     <link name="${prefix}left_finger">
       <visual>
-        <origin xyz="0 0 0.045" rpy="0 0 ${-PI/2.0}"/>
+        <origin xyz="0 0 0.065" rpy="0 0 0"/>
         <geometry>
-          <box size="0.015 0.025 0.09"/>
+          <box size="0.06 0.02 0.13"/>
         </geometry>
         <material name="${prefix}gripper_dark"/>
       </visual>
       <collision>
-        <origin xyz="0 0 0.045" rpy="0 0 ${-PI/2.0}"/>
+        <origin xyz="0 0 0.065" rpy="0 0 0"/>
         <geometry>
-          <box size="0.015 0.025 0.09"/>
+          <box size="0.06 0.02 0.13"/>
         </geometry>
       </collision>
       <inertial>
-        <origin xyz="0 0 0.045" rpy="0 0 ${-PI/2.0}"/>
-        <mass value="0.2"/>
-        <inertia ixx="0.0001" ixy="0.0" ixz="0.0" 
-                 iyy="0.0001" iyz="0.0" 
-                 izz="0.0001"/>
+        <origin xyz="0 0 0.065" rpy="0 0 0"/>
+        <mass value="0.3"/>
+        <inertia ixx="0.00018" ixy="0.0" ixz="0.0" 
+                 iyy="0.00018" iyz="0.0" 
+                 izz="0.00006"/>
       </inertial>
     </link>
 
-    <link name="${prefix}left_finger_hook">
-      <visual>
-        <origin xyz="0 -0.02 0" rpy="0 0 ${-PI/2.0}"/>
-        <geometry>
-          <box size="0.05 0.025 0.01"/>
-        </geometry>
-        <material name="${prefix}gripper_dark"/>
-      </visual>
-      <collision>
-        <origin xyz="0 -0.02 0" rpy="0 0 ${-PI/2.0}"/>
-        <geometry>
-          <box size="0.05 0.025 0.01"/>
-        </geometry>
-      </collision>
-      <inertial>
-        <origin xyz="0 -0.02 0" rpy="0 0 ${-PI/2.0}"/>
-        <mass value="0.05"/>
-        <inertia ixx="0.00005" ixy="0.0" ixz="0.0" 
-                 iyy="0.00005" iyz="0.0" 
-                 izz="0.00005"/>
-      </inertial>
-    </link>
-
-    <link name="${prefix}left_finger_hook_parallel">
-      <visual>
-        <origin xyz="0 0 -0.015" rpy="0 0 0"/>
-        <geometry>
-          <box size="0.025 0.002 0.04"/>
-        </geometry>
-        <material name="${prefix}gripper_dark"/>
-      </visual>
-      <collision>
-        <origin xyz="0 0 -0.015" rpy="0 0 0"/>
-        <geometry>
-          <box size="0.025 0.002 0.06"/>
-        </geometry>
-      </collision>
-      <inertial>
-        <origin xyz="0 0 -0.015" rpy="0 0 0"/>
-        <mass value="0.05"/>
-        <inertia ixx="0.00005" ixy="0.0" ixz="0.0" 
-                 iyy="0.00005" iyz="0.0" 
-                 izz="0.00005"/>
-      </inertial>
-    </link>
-
-    <joint name="${prefix}left_finger_hook_horizontal_joint" type="fixed">
-      <parent link="${prefix}left_finger"/>
-      <child link="${prefix}left_finger_hook"/>
-      <origin xyz="0 0 0.09" rpy="0 0 0"/>
-    </joint>
-
-    <joint name="${prefix}left_finger_hook_parallel_joint" type="fixed">
-      <parent link="${prefix}left_finger_hook"/>
-      <child link="${prefix}left_finger_hook_parallel"/>
-      <origin xyz="0 -0.045 0" rpy="0 0 0"/>
-    </joint>
-
-    <!-- Right Finger -->
+    <!-- Right Finger - Wide blocking design to prevent handle pass-through -->
     <link name="${prefix}right_finger">
       <visual>
-        <origin xyz="0 0 0.045" rpy="0 0 ${-PI/2.0}"/>
+        <origin xyz="0 0 0.065" rpy="0 0 0"/>
         <geometry>
-          <box size="0.015 0.025 0.09"/>
+          <box size="0.06 0.02 0.13"/>
         </geometry>
         <material name="${prefix}gripper_dark"/>
       </visual>
       <collision>
-        <origin xyz="0 0 0.045" rpy="0 0 ${-PI/2.0}"/>
+        <origin xyz="0 0 0.065" rpy="0 0 0"/>
         <geometry>
-          <box size="0.015 0.025 0.09"/>
+          <box size="0.06 0.02 0.13"/>
         </geometry>
       </collision>
       <inertial>
-        <origin xyz="0 0 0.045" rpy="0 0 ${-PI/2.0}"/>
-        <mass value="0.2"/>
-        <inertia ixx="0.0001" ixy="0.0" ixz="0.0" 
-                 iyy="0.0001" iyz="0.0" 
-                 izz="0.0001"/>
+        <origin xyz="0 0 0.065" rpy="0 0 0"/>
+        <mass value="0.3"/>
+        <inertia ixx="0.00018" ixy="0.0" ixz="0.0" 
+                 iyy="0.00018" iyz="0.0" 
+                 izz="0.00006"/>
       </inertial>
     </link>
 
-    <link name="${prefix}right_finger_hook">
+    <!-- Left Finger Pad - Blocking surface to prevent pass-through -->
+    <link name="${prefix}left_finger_pad">
       <visual>
-        <origin xyz="0 0.02 0" rpy="0 0 ${-PI/2.0}"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <box size="0.05 0.025 0.01"/>
+          <box size="0.08 0.005 0.08"/>
         </geometry>
         <material name="${prefix}gripper_dark"/>
       </visual>
       <collision>
-        <origin xyz="0 0.02 0" rpy="0 0 ${-PI/2.0}"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <box size="0.05 0.025 0.01"/>
+          <box size="0.08 0.005 0.08"/>
         </geometry>
       </collision>
       <inertial>
-        <origin xyz="0 0.02 0" rpy="0 0 ${-PI/2.0}"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
         <mass value="0.05"/>
         <inertia ixx="0.00005" ixy="0.0" ixz="0.0" 
                  iyy="0.00005" iyz="0.0" 
@@ -196,40 +139,29 @@
       </inertial>
     </link>
 
-    <link name="${prefix}right_finger_hook_parallel">
+    <!-- Right Finger Pad - Blocking surface to prevent pass-through -->
+    <link name="${prefix}right_finger_pad">
       <visual>
-        <origin xyz="0 0 -0.015" rpy="0 0 0"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <box size="0.025 0.002 0.04"/>
+          <box size="0.08 0.005 0.08"/>
         </geometry>
         <material name="${prefix}gripper_dark"/>
       </visual>
       <collision>
-        <origin xyz="0 0 -0.015" rpy="0 0 0"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <box size="0.025 0.002 0.06"/>
+          <box size="0.08 0.005 0.08"/>
         </geometry>
       </collision>
       <inertial>
-        <origin xyz="0 0 -0.015" rpy="0 0 0"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
         <mass value="0.05"/>
         <inertia ixx="0.00005" ixy="0.0" ixz="0.0" 
                  iyy="0.00005" iyz="0.0" 
                  izz="0.00005"/>
       </inertial>
     </link>
-
-    <joint name="${prefix}right_finger_hook_horizontal_joint" type="fixed">
-      <parent link="${prefix}right_finger"/>
-      <child link="${prefix}right_finger_hook"/>
-      <origin xyz="0 0 0.09" rpy="0 0 0"/>
-    </joint>
-
-    <joint name="${prefix}right_finger_hook_parallel_joint" type="fixed">
-      <parent link="${prefix}right_finger_hook"/>
-      <child link="${prefix}right_finger_hook_parallel"/>
-      <origin xyz="0 0.045 0" rpy="0 0 0"/>
-    </joint>
 
     <!-- Gripper Tip Link (virtual link for grasping point) -->
     <link name="${prefix}gripper_tip">
@@ -250,28 +182,44 @@
     </joint>
 
     <!-- Joint: Left Finger (Prismatic - opens/closes) -->
-    <!-- Finger width = 25mm, so half-width = 12.5mm -->
-    <!-- Origin at palm edge (40mm/2 = 20mm) minus finger half-width (12.5mm) = 7.5mm -->
-    <!-- Lower limit (closed): fingers meet at center without overlap -->
-    <!-- Upper limit (open): 50mm travel = 100mm total grip width -->
+    <!-- Simple parallel jaw gripper with sufficient range to grasp bucket handle -->
+    <!-- Starting position: 20mm from center (40mm total separation) -->
+    <!-- Closed: -25mm travel = fingers almost touch (can grip thin handles) -->
+    <!-- Open: +70mm travel = 180mm grip width (wide opening for approach) -->
+    <!-- COMPLIANT DYNAMICS: Lower damping (10.0) prevents force buildup during contact -->
     <joint name="${prefix}left_finger_joint" type="prismatic">
       <parent link="${prefix}gripper_palm"/>
       <child link="${prefix}left_finger"/>
-      <origin xyz="-0.015 0.0275 0.04" rpy="0 0 0"/>
+      <origin xyz="0 0.020 0.04" rpy="0 0 0"/>
       <axis xyz="0 1 0"/>
-      <limit lower="-0.0125" upper="0.05" effort="2000" velocity="0.5"/>
-      <dynamics damping="50.0" friction="10.0"/>
+      <limit lower="-0.025" upper="0.070" effort="500" velocity="0.2"/>
+      <dynamics damping="10.0" friction="5.0"/>
     </joint>
 
     <!-- Joint: Right Finger (Prismatic - opens/closes) -->
     <!-- Mirrors left finger motion to maintain symmetric gripping -->
+    <!-- COMPLIANT DYNAMICS: Lower damping (10.0) prevents force buildup during contact -->
     <joint name="${prefix}right_finger_joint" type="prismatic">
       <parent link="${prefix}gripper_palm"/>
       <child link="${prefix}right_finger"/>
-      <origin xyz="0.015 -0.0275 0.04" rpy="0 0 0"/>
+      <origin xyz="0 -0.020 0.04" rpy="0 0 0"/>
       <axis xyz="0 -1 0"/>
-      <limit lower="-0.0125" upper="0.05" effort="2000" velocity="0.5"/>
-      <dynamics damping="50.0" friction="10.0"/>
+      <limit lower="-0.025" upper="0.070" effort="500" velocity="0.2"/>
+      <dynamics damping="10.0" friction="5.0"/>
+    </joint>
+
+    <!-- Joint: Left Finger to Pad (creates blocking surface) -->
+    <joint name="${prefix}left_finger_pad_joint" type="fixed">
+      <parent link="${prefix}left_finger"/>
+      <child link="${prefix}left_finger_pad"/>
+      <origin xyz="0 0.0075 0.09" rpy="0 0 0"/>
+    </joint>
+
+    <!-- Joint: Right Finger to Pad (creates blocking surface) -->
+    <joint name="${prefix}right_finger_pad_joint" type="fixed">
+      <parent link="${prefix}right_finger"/>
+      <child link="${prefix}right_finger_pad"/>
+      <origin xyz="0 -0.0075 0.09" rpy="0 0 0"/>
     </joint>
 
     <!-- Joint: Palm to Gripper Tip (fixed, for reference point) -->
@@ -324,7 +272,7 @@
       <gravity>false</gravity>
     </gazebo>
 
-    <gazebo reference="${prefix}left_finger_hook">
+    <gazebo reference="${prefix}left_finger_pad">
       <material>Gazebo/DarkGrey</material>
       <mu1>3.0</mu1>
       <mu2>3.0</mu2>
@@ -332,14 +280,14 @@
       <kd>5000.0</kd>
       <minDepth>0.00001</minDepth>
       <maxVel>0.001</maxVel>
-      <fdir1>0 0 1</fdir1>
+      <fdir1>0 1 0</fdir1>
       <softCfm>0.0</softCfm>
       <softErp>0.9</softErp>
       <selfCollide>true</selfCollide>
       <gravity>false</gravity>
     </gazebo>
 
-    <gazebo reference="${prefix}right_finger_hook">
+    <gazebo reference="${prefix}right_finger_pad">
       <material>Gazebo/DarkGrey</material>
       <mu1>3.0</mu1>
       <mu2>3.0</mu2>
@@ -347,37 +295,7 @@
       <kd>5000.0</kd>
       <minDepth>0.00001</minDepth>
       <maxVel>0.001</maxVel>
-      <fdir1>0 0 1</fdir1>
-      <softCfm>0.0</softCfm>
-      <softErp>0.9</softErp>
-      <selfCollide>true</selfCollide>
-      <gravity>false</gravity>
-    </gazebo>
-
-    <gazebo reference="${prefix}left_finger_hook_parallel">
-      <material>Gazebo/DarkGrey</material>
-      <mu1>3.0</mu1>
-      <mu2>3.0</mu2>
-      <kp>50000000.0</kp>
-      <kd>5000.0</kd>
-      <minDepth>0.00001</minDepth>
-      <maxVel>0.001</maxVel>
-      <fdir1>0 0 1</fdir1>
-      <softCfm>0.0</softCfm>
-      <softErp>0.9</softErp>
-      <selfCollide>true</selfCollide>
-      <gravity>false</gravity>
-    </gazebo>
-
-    <gazebo reference="${prefix}right_finger_hook_parallel">
-      <material>Gazebo/DarkGrey</material>
-      <mu1>3.0</mu1>
-      <mu2>3.0</mu2>
-      <kp>50000000.0</kp>
-      <kd>5000.0</kd>
-      <minDepth>0.00001</minDepth>
-      <maxVel>0.001</maxVel>
-      <fdir1>0 0 1</fdir1>
+      <fdir1>0 1 0</fdir1>
       <softCfm>0.0</softCfm>
       <softErp>0.9</softErp>
       <selfCollide>true</selfCollide>
