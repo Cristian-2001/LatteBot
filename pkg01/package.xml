@@ -71,6 +71,9 @@
   <depend>ros_control</depend>
   <depend>ros_controllers</depend>
 
+  <depend>moveit_commander</depend>
+  <depend>moveit_ros_planning_interface</depend>
+
   <!-- The export tag contains other, unspecified, tags -->
   <export>
     <!-- Other tools can request additional information be placed here -->

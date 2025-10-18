@@ -10,7 +10,7 @@ import actionlib
 from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
 from trajectory_msgs.msg import JointTrajectoryPoint
 
-def move_platform(position, duration=5.0):
+def move_platform(position, duration=5.0) -> bool:
     """
     Move the platform to a specific position.
     
