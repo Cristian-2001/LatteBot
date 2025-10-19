@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import sys
+import time
 
 import rospy
 from std_msgs.msg import String
@@ -11,12 +12,13 @@ from move_platform import move_platform
 
 # define poses
 HOME = "home"
-INTERMEDIATE_GRAB = "intermediate_grab"
-GRAB = "grab"
-INTERMEDIATE_POSE = "intermediate_pose"
-LEAVE = "leave"
+INTERMEDIATE_GRASP = "intermediate_grasp"
+GRASP = "grasp"
+INTERMEDIATE_PLACE = "intermediate_place"
+PLACE = "place"
 OPEN = "open"
 CLOSE = "close"
+GRASP_HANDLE = "grasp_handle"  # Intermediate gripper position for bucket handle
 
 class RobotMovementPipeline:
     def __init__(self):
@@ -32,6 +34,7 @@ class RobotMovementPipeline:
         # Store current joint states
         self.current_joint_states = None
         self.home_position = 0.0
+        self.platform_position = 0.0
         
         # Subscribe to joint states
         self.joint_state_sub = rospy.Subscriber(
@@ -85,10 +88,10 @@ class RobotMovementPipeline:
         except ValueError:
             rospy.logwarn_once("platform_joint not found in joint_states")
 
-    def _move_arm_to_pose(self, pose: str) -> bool:
-        """Move the UR10e arm to the position named "pose" using MoveIt."""
+    def _move_manipulator_to_pose(self, pose: str) -> bool:
+        """Move the UR10e manipulator to the position named "pose" using MoveIt."""
         try:
-            rospy.loginfo(f"Moving arm to {pose} position...")
+            rospy.loginfo(f"Moving manipulator to {pose} position...")
             
             # Use the 'pose' named target defined in SRDF
             self.move_group.set_named_target(pose)
@@ -103,20 +106,20 @@ class RobotMovementPipeline:
             self.move_group.clear_pose_targets()
             
             if plan:
-                rospy.loginfo(f"Arm successfully moved to {pose} position")
+                rospy.loginfo(f"Manipulator successfully moved to {pose} position")
                 return True
             else:
                 rospy.logwarn(f"Failed to plan path to {pose} position")
                 return False
                 
         except Exception as e:
-            rospy.logerr(f"Error moving arm to {pose}: {e}")
+            rospy.logerr(f"Error moving manipulator to {pose}: {e}")
             return False
         
     def _move_gripper(self, pose: str) -> bool:
         """Opens or close the gripper"""
         try:
-            rospy.loginfo(f"Moving arm to {pose} position...")
+            rospy.loginfo(f"Moving gripper to {pose} position...")
             
             # Use the 'pose' named target defined in SRDF
             self.gripper_group.set_named_target(pose)
@@ -158,32 +161,40 @@ class RobotMovementPipeline:
 
         # Execute movement sequence
         sequence = [
-            ("arm", INTERMEDIATE_GRAB),
+            ("manipulator", INTERMEDIATE_GRASP),
             ("gripper", OPEN),
-            ("arm", GRAB),
-            ("gripper", CLOSE),
-            ("arm", INTERMEDIATE_POSE),
+            ("manipulator", GRASP),
+            ("gripper", CLOSE),  # Use handle-specific position (0.55 rad) instead of full close
+            ("manipulator", INTERMEDIATE_GRASP),
             ("platform", cow_position),
-            ("arm", INTERMEDIATE_POSE),
-            ("arm", LEAVE),
+            ("manipulator", INTERMEDIATE_PLACE),
+            ("manipulator", PLACE),
             ("gripper", OPEN),
-            ("arm", INTERMEDIATE_POSE),
-            ("arm", HOME)
+            ("manipulator", INTERMEDIATE_PLACE),
+            ("manipulator", HOME)
         ]
         
         for action_type, target in sequence:
-            if action_type == "arm":
-                if not self._move_arm_to_pose(target):
-                    rospy.logerr(f"Failed to move arm to {target}")
+            rospy.loginfo(f"Executing {action_type} to {target}")
+            if action_type == "manipulator":
+                if not self._move_manipulator_to_pose(target):
+                    rospy.logerr(f"Failed to move manipulator to {target}")
                     return
-                elif action_type == "gripper":
-                    if not self._move_gripper(target):
-                        rospy.logerr(f"Failed to move gripper to {target}")
-                        return
-                    elif action_type == "platform":
-                        if not move_platform(target):
-                            rospy.logerr(f"Failed to move platform to {target}")
-                            return
+            elif action_type == "gripper":
+                if not self._move_gripper(target):
+                    rospy.logerr(f"Failed to move gripper to {target}")
+                    return
+            elif action_type == "platform":
+                if not move_platform(target):
+                    rospy.logerr(f"Failed to move platform to {target}")
+                    return
+            elif action_type == "wait":
+                rospy.loginfo(f"Waiting {target} seconds for settling...")
+                time.sleep(target)
+                continue  # Skip the standard 1s pause
+            time.sleep(1)  # brief pause between actions
+
+        print("Movement sequence completed successfully. Ready for next command.")
     
     def run(self):
         """Keep the node running."""

@@ -311,8 +311,12 @@
   <joint name="gripper_mount" type="fixed">
     <parent link="flange"/>
     <child link="robotiq_arg2f_base_link"/>
-    <origin xyz="0 0 0" rpy="0 ${PI/2} ${PI/2}"/>
+    <origin xyz="0 0 0" rpy="${-PI/2} 0 0"/>
   </joint>
+
+  <!-- Include Gazebo properties for gripper (high friction for grasping) -->
+  <xacro:include filename="$(find pkg01)/urdf/gripper_gazebo.xacro"/>
+  <xacro:gripper_gazebo_properties prefix=""/>
 
   <!-- Gazebo plugin for ROS Control -->
   <gazebo>

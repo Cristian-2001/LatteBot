@@ -60,15 +60,16 @@ ur10e_robot:
 
   # Gripper Controller (for Robotiq 2F-140 gripper)
   # Controls the main finger_joint (other joints use mimic)
+  # HIGH GAIN: Prioritize complete closure for reliable grasping
   gripper_controller:
     type: position_controllers/JointTrajectoryController
     joints:
       - finger_joint
     
     constraints:
-      goal_time: 2.0
+      goal_time: 6.0  # Very slow closing for maximum gentleness despite high gains
       stopped_velocity_tolerance: 0.05
-      finger_joint: {trajectory: 0.1, goal: 0.01}
+      finger_joint: {trajectory: 0.15, goal: 0.005}  # Very tight tolerance - must close fully
     
     stop_trajectory_duration: 0.5
     state_publish_rate: 50
@@ -76,4 +77,4 @@ ur10e_robot:
     action_ns: follow_joint_trajectory
     
     gains:
-      finger_joint: {p: 1000.0, i: 50.0, d: 100.0}
+      finger_joint: {p: 1500.0, i: 100.0, d: 150.0, i_clamp: 100.0}  # High gains for complete closure

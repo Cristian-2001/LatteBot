@@ -1,0 +1,106 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+  
+  <!-- Gazebo-specific properties for Robotiq 2F-140 gripper -->
+  <!-- ULTRA-AGGRESSIVE ANTI-SLIP: Maximum friction + high stiffness -->
+  
+  <xacro:macro name="gripper_gazebo_properties" params="prefix">
+    
+    <!-- Left inner finger pad - primary contact surface -->
+    <gazebo reference="${prefix}left_inner_finger_pad">
+      <mu1>15.0</mu1>  <!-- EXTREME friction to prevent slip during closing -->
+      <mu2>15.0</mu2>
+      <kp>2000000.0</kp>  <!-- 2M stiffness - even higher than bucket for grip dominance -->
+      <kd>2000.0</kd>      <!-- 2000 damping - more aggressive stabilization -->
+      <maxVel>0.0005</maxVel>      <!-- Halved: extremely slow correction for stability -->
+      <minDepth>0.00005</minDepth>  <!-- 0.05mm - ultra-fine contact detection -->
+      <selfCollide>false</selfCollide>  <!-- Prevent internal gripper collisions -->
+      <material>Gazebo/DarkGrey</material>
+    </gazebo>
+    
+    <!-- Right inner finger pad - primary contact surface -->
+    <gazebo reference="${prefix}right_inner_finger_pad">
+      <mu1>15.0</mu1>
+      <mu2>15.0</mu2>
+      <kp>2000000.0</kp>
+      <kd>2000.0</kd>
+      <maxVel>0.0005</maxVel>
+      <minDepth>0.00005</minDepth>
+      <selfCollide>false</selfCollide>
+      <material>Gazebo/DarkGrey</material>
+    </gazebo>
+    
+    <!-- Left inner finger - secondary contact -->
+    <gazebo reference="${prefix}left_inner_finger">
+      <mu1>12.0</mu1>  <!-- Very high friction -->
+      <mu2>12.0</mu2>
+      <kp>2000000.0</kp>
+      <kd>2000.0</kd>
+      <maxVel>0.0005</maxVel>
+      <minDepth>0.00005</minDepth>
+      <selfCollide>false</selfCollide>
+      <material>Gazebo/Black</material>
+    </gazebo>
+    
+    <!-- Right inner finger - secondary contact -->
+    <gazebo reference="${prefix}right_inner_finger">
+      <mu1>12.0</mu1>
+      <mu2>12.0</mu2>
+      <kp>2000000.0</kp>
+      <kd>2000.0</kd>
+      <maxVel>0.0005</maxVel>
+      <minDepth>0.00005</minDepth>
+      <selfCollide>false</selfCollide>
+      <material>Gazebo/Black</material>
+    </gazebo>
+    
+    <!-- Left outer finger -->
+    <gazebo reference="${prefix}left_outer_finger">
+      <mu1>12.0</mu1>
+      <mu2>12.0</mu2>
+      <kp>2000000.0</kp>
+      <kd>2000.0</kd>
+      <maxVel>0.0005</maxVel>
+      <minDepth>0.00005</minDepth>
+      <selfCollide>false</selfCollide>
+      <material>Gazebo/Black</material>
+    </gazebo>
+    
+    <!-- Right outer finger -->
+    <gazebo reference="${prefix}right_outer_finger">
+      <mu1>12.0</mu1>
+      <mu2>12.0</mu2>
+      <kp>2000000.0</kp>
+      <kd>2000.0</kd>
+      <maxVel>0.0005</maxVel>
+      <minDepth>0.00005</minDepth>
+      <selfCollide>false</selfCollide>
+      <material>Gazebo/Black</material>
+    </gazebo>
+    
+    <!-- Gripper base -->
+    <gazebo reference="${prefix}robotiq_arg2f_base_link">
+      <mu1>3.0</mu1>
+      <mu2>3.0</mu2>
+      <material>Gazebo/FlatBlack</material>
+    </gazebo>
+    
+    <!-- Left outer knuckle -->
+    <gazebo reference="${prefix}left_outer_knuckle">
+      <mu1>6.0</mu1>
+      <mu2>6.0</mu2>
+      <kp>1000000.0</kp>
+      <kd>1000.0</kd>
+    </gazebo>
+    
+    <!-- Right outer knuckle -->
+    <gazebo reference="${prefix}right_outer_knuckle">
+      <mu1>6.0</mu1>
+      <mu2>6.0</mu2>
+      <kp>1000000.0</kp>
+      <kd>1000.0</kd>
+    </gazebo>
+    
+  </xacro:macro>
+  
+</robot>

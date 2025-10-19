@@ -29,10 +29,10 @@
 		<include>
 			<uri>model://ground_plane</uri>
 		</include>
-<!-- Our custom model -->
+		<!-- Our custom model -->
 		<include>
 			<uri>model://bucket</uri>
-			<pose>-0.7 0 0 1.5707963267948966 0 0</pose>
+			<pose>-0.7 0 0 1.5707963267948966 0 1.5707963267948966</pose>
 		</include>
 	</world>
 </sdf>
