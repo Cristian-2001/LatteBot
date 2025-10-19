@@ -3,13 +3,15 @@
 ## Project Overview
 This is a **ROS (Robot Operating System) Catkin workspace** for simulating a **Universal Robots UR10e manipulator with Robotiq 2F-140 gripper mounted on a 10-meter linear mobile platform** in Gazebo. The system combines mobile manipulation with MoveIt motion planning for extended workspace operations.
 
-**Workspace Root**: `/home/vboxuser/lattebot_ws2/src`  
+**Workspace Root**: Variable (user-specific). Common paths: `/home/aldo/Desktop/smerd/lattebot_ws`, `/home/vboxuser/lattebot_ws2`
+
 **Primary Packages**: 
 - `pkg01` - Robot model, platform, controllers, simulation, and custom objects
 - `ur10e_moveit_config` - MoveIt planning configuration (auto-generated, manually tuned)
 - `robotiq/robotiq_2f_140_gripper_visualization` - Robotiq gripper URDF and meshes
+- `roboticsgroup_gazebo_plugins` - Mimic joint plugin for gripper linkage
 
-**Key Documentation**: See `pkg01/claude_explanations/*.md` for troubleshooting guides and fix summaries covering collision tuning, physics parameters, Gazebo caching, gripper integration, and control evolution.
+**Key Documentation**: See `pkg01/claude_explanations/*.md` for extensive troubleshooting guides and fix summaries covering collision tuning, physics parameters, Gazebo caching, gripper integration, and control evolution. **ALWAYS consult these files** before making physics or controller changes.
 
 ## Architecture & Key Components
 
@@ -126,9 +128,14 @@ world_platform (fixed ground reference, MUST have inertial properties)
 
 ### Build & Source
 ```bash
-cd /home/vboxuser/lattebot_ws2
+cd ~/Desktop/smerd/lattebot_ws  # Adjust to your workspace path
 catkin_make
 source devel/setup.bash
+```
+
+**CRITICAL**: Always source after building. Add to `~/.bashrc` for persistence:
+```bash
+echo "source ~/Desktop/smerd/lattebot_ws/devel/setup.bash" >> ~/.bashrc
 ```
 
 ### Launch Simulation Scenarios
@@ -162,17 +169,17 @@ roslaunch pkg01 ur10e.launch  # Uses joint_state_publisher_gui
 
 ### Control Platform Motion
 ```bash
-# Automated demo sequence (0m → 2.5m → 5m → 7.5m → 10m → return)
-rosrun pkg01 demo_platform.py
-
 # Move to specific position (0.0 to 10.0 meters)
 rosrun pkg01 move_platform.py _position:=5.0 _duration:=3.0
 
-# Verify platform integration
-rosrun pkg01 verify_platform.py
+# Get current joint states
+rosrun pkg01 get_joint_states.py
 
-# Add RViz range markers for platform visualization
-rosrun pkg01 platform_range_markers.py
+# Get frame orientation
+rosrun pkg01 get_frame_orientation.py
+
+# Check wrist orientation
+rosrun pkg01 wrist_orientation.py
 ```
 
 ### Debugging Controllers
@@ -194,9 +201,6 @@ rostopic info /ur10e_robot/gripper_controller/follow_joint_trajectory
 
 ### Testing Robotiq Gripper
 ```bash
-# Test gripper open/close sequence
-rosrun pkg01 test_robotiq_gripper.py
-
 # Monitor joint states (check finger_joint position)
 rostopic echo /ur10e_robot/joint_states | grep finger_joint
 
@@ -347,21 +351,30 @@ Every `<collision>` in SDF must include:
 <surface>
   <friction>
     <ode>
-      <mu>3.0</mu>      <!-- High friction for handles, matches gripper -->
-      <mu2>3.0</mu2>
+      <mu>20.0</mu>      <!-- EXTREME friction - must exceed gripper friction -->
+      <mu2>20.0</mu2>
+      <fdir1>0 0 1</fdir1>  <!-- Vertical friction for lift forces -->
     </ode>
   </friction>
   <contact>
     <ode>
-      <kp>10000000.0</kp>  <!-- 10M - ultra-stiff contact (prevents pass-through) -->
-      <kd>1000.0</kd>       <!-- 10x damping for stability -->
-      <max_vel>0.01</max_vel>       <!-- Slow correction prevents explosive separation -->
-      <min_depth>0.0001</min_depth>  <!-- 0.1mm - fine detection for thin geometry -->
+      <kp>3000000.0</kp>  <!-- 3M - ultra-stiff, exceeds gripper (2M) for stability -->
+      <kd>3000.0</kd>     <!-- 3000 damping - maximum stabilization -->
+      <max_vel>0.0001</max_vel>     <!-- Ultra-slow correction: 0.1mm/s -->
+      <min_depth>0.00005</min_depth>  <!-- 0.05mm - matches gripper exactly -->
     </ode>
   </contact>
+  <soft_cfm>0.0</soft_cfm>  <!-- Perfectly rigid contact -->
+  <soft_erp>0.2</soft_erp>  <!-- Balanced error correction -->
 </surface>
 ```
-**Why**: Without friction/contact params, objects have near-zero friction (slip through gripper). Ultra-stiff contacts (kp=10M) prevent pass-through during lift. Match gripper friction (`mu=3.0`) for stable grasping. World physics should use 100 ODE solver iterations with ERP=0.9, CFM=0.0 for rigid contacts. See `BUCKET_PASSTHROUGH_FIX.md` for details.
+**CRITICAL Physics Hierarchy for Stable Grasping**:
+- **Friction**: Grasped object (μ=20.0) > Gripper pads (μ=15.0) - prevents "overpowering" slip
+- **Stiffness**: Grasped object (kp=3M) > Gripper (kp=2M) - object "pushes back" harder
+- **Correction speed**: Grasped object (0.0001) < Gripper (0.0005) - prevents oscillation
+- **Contact detection**: Must match exactly (0.00005m) for synchronized contact
+
+**Why**: Gripper has μ=15.0 on finger pads, μ=12.0 on fingers, kp=2M, kd=2000. Objects with lower friction/stiffness will slip during dynamic lifting. The grasped object must be "stronger" than the gripper in all contact properties. World physics should use 100 ODE solver iterations with ERP=0.9, CFM=0.0 for rigid contacts. See `LIFT_SLIP_FIX_2025.md` and `BUCKET_PASSTHROUGH_FIX.md` for detailed physics tuning.
 
 ## Common Pitfalls
 1. **Forgetting to source workspace**: Always `source devel/setup.bash` after building
@@ -381,10 +394,13 @@ Every `<collision>` in SDF must include:
     - Add `<disable_collisions>` entries for new links with adjacent/parent links
     - See `COLLISION_FIX.md` for patterns
 11. **Objects slipping through gripper**: Missing surface physics in model SDF
-    - Add `<surface><friction><ode>` blocks with `mu=3.0` to all collision geometries
-    - Add ultra-stiff `<contact>` params: `kp=10000000`, `kd=1000`, `max_vel=0.01`, `min_depth=0.0001`
+    - Add `<surface><friction><ode>` blocks with `mu=20.0` to all collision geometries
+    - Add ultra-stiff `<contact>` params: `kp=3000000`, `kd=3000`, `max_vel=0.0001`, `min_depth=0.00005`
+    - Add directional friction: `<fdir1>0 0 1</fdir1>` for vertical lift forces
+    - Add soft contact: `<soft_cfm>0.0</soft_cfm>`, `<soft_erp>0.2</soft_erp>`
     - Enable `<self_collide>true</self_collide>` on model and link
-    - See `BUCKET_PASSTHROUGH_FIX.md` for comprehensive solution
+    - **Rule**: Grasped object friction/stiffness must EXCEED gripper values for stable contact
+    - See `LIFT_SLIP_FIX_2025.md` and `BUCKET_PASSTHROUGH_FIX.md` for comprehensive solutions
 12. **MoveIt cannot execute gripper**: Controller not listed in MoveIt controller configs
     - Update BOTH `ros_controllers.yaml` AND `simple_moveit_controllers.yaml`
     - List ALL joints the controller manages (for Robotiq: only `finger_joint`)

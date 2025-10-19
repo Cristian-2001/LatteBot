@@ -210,6 +210,7 @@
     <limit lower="${shoulder_pan_lower_limit}" upper="${shoulder_pan_upper_limit}"
            effort="330.0" velocity="2.16"/>
     <dynamics damping="0.0" friction="0.0"/>
+    <initial_position value="2.710"/>
   </joint>
 
   <!-- Upper arm link -->
@@ -221,6 +222,7 @@
     <limit lower="${shoulder_lift_lower_limit}" upper="${shoulder_lift_upper_limit}"
            effort="330.0" velocity="2.16"/>
     <dynamics damping="0.0" friction="0.0"/>
+    <initial_position value="0.580"/>
   </joint>
 
   <!-- Forearm link -->
@@ -232,6 +234,7 @@
     <limit lower="${elbow_joint_lower_limit}" upper="${elbow_joint_upper_limit}"
            effort="150.0" velocity="3.15"/>
     <dynamics damping="0.0" friction="0.0"/>
+    <initial_position value="2.530"/>
   </joint>
 
   <!-- Wrist 1 link -->
@@ -243,6 +246,7 @@
     <limit lower="${wrist_1_lower_limit}" upper="${wrist_1_upper_limit}"
            effort="54.0" velocity="3.2"/>
     <dynamics damping="0.0" friction="0.0"/>
+    <initial_position value="-3.106"/>
   </joint>
 
   <!-- Wrist 2 link -->
@@ -254,6 +258,7 @@
     <limit lower="${wrist_2_lower_limit}" upper="${wrist_2_upper_limit}"
            effort="54.0" velocity="3.2"/>
     <dynamics damping="0.0" friction="0.0"/>
+    <initial_position value="-1.142"/>
   </joint>
 
   <!-- Wrist 3 link -->
@@ -265,6 +270,7 @@
     <limit lower="${wrist_3_lower_limit}" upper="${wrist_3_upper_limit}"
            effort="54.0" velocity="3.2"/>
     <dynamics damping="0.0" friction="0.0"/>
+    <initial_position value="0.0"/>
   </joint>
 
   <!-- End effector frame -->
