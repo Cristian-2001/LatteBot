@@ -53,6 +53,9 @@
     <remap from="/joint_states" to="/ur10e_robot/joint_states" />
   </node>
 
+  <!-- Launch robot_movement.py -->
+  <node name="robot_movement" pkg="pkg01" type="robot_movement.py" output="screen"/>
+
   <!-- Launch MoveIt for motion planning -->
   <arg name="moveit" default="true" doc="Launch MoveIt motion planning"/>
   <group if="$(arg moveit)">

@@ -7,12 +7,13 @@
       <gravity>true</gravity>
       <self_collide>true</self_collide>
       <inertial>
-        <mass>2.0</mass>  <!-- Increased mass for better stability -->
+        <mass>0.5</mass>  <!-- 0.5kg - lightweight plastic bucket for easier lifting -->
+        <pose>0 0.25 0 0 0 0</pose>  <!-- Center of mass between body (Y=0.18) and handle (Y=0.505) -->
         <inertia>
-          <!-- More realistic inertia for cylinder -->
-          <ixx>0.04</ixx>
-          <iyy>0.04</iyy>
-          <izz>0.03</izz>
+          <!-- Reduced inertia for lighter bucket -->
+          <ixx>0.010</ixx>  <!-- Around X axis -->
+          <iyy>0.010</iyy>  <!-- Around Y axis -->
+          <izz>0.004</izz>  <!-- Around Z axis -->
           <ixy>0</ixy>
           <ixz>0</ixz>
           <iyz>0</iyz>
@@ -30,7 +31,7 @@
       </visual>
       
       <!-- Simplified collision: Cylinder for bucket body -->
-      <!-- CRITICAL: Must match handle stiffness to prevent sinking through ground -->
+      <!-- LOW FRICTION with ground to allow easy lifting -->
       <collision name="bucket_body">
         <pose>0 0.18 0 1.5707963267948966 0 0</pose>
         <geometry>
@@ -42,8 +43,8 @@
         <surface>
           <friction>
             <ode>
-              <mu>3.0</mu>      <!-- Moderate friction for ground contact -->
-              <mu2>3.0</mu2>
+              <mu>0.3</mu>      <!-- LOW friction for ground contact - allows lifting -->
+              <mu2>0.3</mu2>
             </ode>
           </friction>
           <contact>
@@ -73,17 +74,17 @@
         <surface>
           <friction>
             <ode>
-              <mu>20.0</mu>      <!-- EXTREME friction - exceeds gripper to ensure grip -->
-              <mu2>20.0</mu2>
+              <mu>1000.0</mu>      <!-- EXTREME friction - exceeds gripper to ensure grip -->
+              <mu2>1000.0</mu2>
               <fdir1>0 0 1</fdir1>  <!-- Vertical friction direction for lift forces -->
             </ode>
           </friction>
           <contact>
             <ode>
-              <kp>3000000.0</kp>        <!-- 3M stiffness - exceeds gripper for stability -->
+              <kp>3000000.0</kp>        <!-- 3M stiffness - exceeds gripper (2M) for stable grip -->
               <kd>3000.0</kd>           <!-- 3000 damping - maximum stabilization -->
-              <max_vel>0.0001</max_vel> <!-- Ultra-slow correction: 0.1mm/s (was 1mm/s) -->
-              <min_depth>0.00005</min_depth>  <!-- Match gripper: 0.05mm detection -->
+              <max_vel>0.0001</max_vel> <!-- Ultra-slow correction: 0.1mm/s -->
+              <min_depth>0.00005</min_depth>  <!-- 0.05mm - matches gripper exactly -->
             </ode>
           </contact>
           <bounce>
@@ -94,7 +95,6 @@
           <soft_erp>0.2</soft_erp>  <!-- Balanced error correction -->
         </surface>
       </collision>
-
       
     </link>
   </model>

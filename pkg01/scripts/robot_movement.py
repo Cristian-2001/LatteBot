@@ -51,14 +51,23 @@ class RobotMovementPipeline:
         )
 
         # check if the platform is in home position, otherwise move it there
-        if self.get_platform_position() != 0:
+        if abs(self.platform_position - self.home_position) > 0.01:  # 1cm tolerance
+            rospy.loginfo(f"Platform not at home ({self.platform_position:.3f}m), moving to home...")
             self._go_home()
+            # Wait for platform to reach home
+            rate = rospy.Rate(10)
+            timeout = rospy.Duration(30)
+            start_time = rospy.Time.now()
+            while not rospy.is_shutdown():
+                if abs(self.platform_position - 0.0) < 0.01:
+                    rospy.loginfo("Platform returned to home position")
+                    break
+                if rospy.Time.now() - start_time > timeout:
+                    rospy.logerr("Platform home movement timeout")
+                    return
+                rate.sleep()
         
         rospy.loginfo("Robot listener node started, waiting for cow numbers...")
-        
-    def get_platform_position(self):
-        """Get current platform position."""
-        return self.platform_position
     
     def _get_cow_position(self, cow_num: str):
         """Map cow number to platform position and move."""
@@ -156,8 +165,21 @@ class RobotMovementPipeline:
             return
 
         # check if the platform is in home position, otherwise move it there
-        if self.get_platform_position() != 0:
-            self._go_home
+        if abs(self.platform_position - self.home_position) > 0.01:  # 1cm tolerance
+            rospy.loginfo(f"Platform not at home ({self.platform_position:.3f}m), moving to home...")
+            self._go_home()
+            # Wait for platform to reach home
+            rate = rospy.Rate(10)
+            timeout = rospy.Duration(30)
+            start_time = rospy.Time.now()
+            while not rospy.is_shutdown():
+                if abs(self.platform_position - 0.0) < 0.01:
+                    rospy.loginfo("Platform returned to home position")
+                    break
+                if rospy.Time.now() - start_time > timeout:
+                    rospy.logerr("Platform home movement timeout")
+                    return
+                rate.sleep()
 
         # Execute movement sequence
         sequence = [
@@ -185,9 +207,24 @@ class RobotMovementPipeline:
                     rospy.logerr(f"Failed to move gripper to {target}")
                     return
             elif action_type == "platform":
+                rospy.loginfo(f"Moving platform to position {target}...")
                 if not move_platform(target):
                     rospy.logerr(f"Failed to move platform to {target}")
                     return
+                # Wait for platform to reach target position
+                rate = rospy.Rate(10)  # 10 Hz
+                timeout = rospy.Duration(30)  # 30 second timeout
+                start_time = rospy.Time.now()
+                while not rospy.is_shutdown():
+                    if abs(self.platform_position - target) < 0.01:  # 1cm tolerance
+                        rospy.loginfo(f"Platform reached target position: {self.platform_position:.3f}m")
+                        break
+                    if rospy.Time.now() - start_time > timeout:
+                        rospy.logerr("Platform movement timeout")
+                        return
+                    rate.sleep()
+                # Update internal platform position tracker
+                rospy.loginfo(f"Platform position updated: {self.platform_position:.3f}m")
             elif action_type == "wait":
                 rospy.loginfo(f"Waiting {target} seconds for settling...")
                 time.sleep(target)

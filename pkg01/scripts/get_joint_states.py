@@ -16,9 +16,9 @@ group = moveit_commander.MoveGroupCommander("manipulator")
 target_pose = Pose()
 
 # Position (relative to base_link)
-target_pose.position.x = 0.23#-0.7
-target_pose.position.y = -0.4#0.0
-target_pose.position.z = 0.12#0.630 #0.800
+target_pose.position.x = -0.7#0.23
+target_pose.position.y = 0.0#-0.4
+target_pose.position.z = 0.800#0.12#0.630
 
 # Orientation: Convert Euler angles (roll, pitch, yaw) to quaternion
 # Example: Point gripper downward (pitch = PI)
