@@ -1,4 +1,6 @@
 import configparser
+import os
+
 import paho.mqtt.client as paho
 from paho import mqtt
 import rospy
@@ -7,9 +9,11 @@ from std_msgs.msg import String
 
 class Bridge():
     def __init__(self):
-        self.config = configparser.ConfigParser()
-        self.config.read('config.ini')
-        self.topic = self.config.get("MQTT", "Topic", fallback="Pickup-Site")
+        # Get the absolute path to the config directory
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        config_path = os.path.join(script_dir, '..', 'config', 'config.ini')
+        self.config.read(config_path)
+
         self._init_rospy()
         self._setupMQTT()
 
