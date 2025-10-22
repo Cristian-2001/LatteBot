@@ -3,3 +3,4 @@ general-pkgs/
 roboticsgroup_gazebo_plugins/
 robotiq/
 .venv/
+__pycache__/

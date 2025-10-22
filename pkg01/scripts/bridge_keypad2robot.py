@@ -15,7 +15,7 @@ class Bridge():
 
     def _init_rospy(self):
         rospy.init_node('pickup_site', anonymous=True)
-        self.pub = rospy.Publisher('cow_num', String, queue_size=10)
+        self.pub = rospy.Publisher('calf_num', String, queue_size=10)
         self.rate = rospy.Rate(1) # 1hz
 
     def _setupMQTT(self):
@@ -36,9 +36,9 @@ class Bridge():
         self.clientMQTT.loop_start()
 
     def _rospy_talker(self, value):
-        cow_num = str(value)
-        rospy.loginfo(cow_num)
-        self.pub.publish(cow_num)
+        calf_num = str(value)
+        rospy.loginfo(calf_num)
+        self.pub.publish(calf_num)
 
     def _on_connect(self, client, userdata, flags, rc, properties=None):
         print("Connected with result code " + str(rc))

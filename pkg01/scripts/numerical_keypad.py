@@ -5,7 +5,7 @@ class NumericalKeypad:
     def __init__(self, root, callback=None):
         self.root = root
         self.root.title("Numerical Keypad")
-        self.root.geometry("400x600")
+        self.root.geometry("600x800")
         self.root.configure(bg='#667eea')
         
         self.current_input = ""
@@ -66,7 +66,7 @@ class NumericalKeypad:
             font=('Arial', 20, 'bold'),
             bg='#f5576c',
             fg='white',
-            activebackground='#f093fb',
+            activebackground="#ff0000",
             activeforeground='white',
             width=5,
             height=2,
@@ -74,9 +74,43 @@ class NumericalKeypad:
             cursor='hand2',
             command=self.clear_display
         )
-        clear_btn.grid(row=3, column=0, padx=5, pady=5)
+        clear_btn.grid(row=0, column=3, padx=5, pady=5)
         
-        # Zero button (spans 2 columns)
+        # Undo button
+        # undo_btn = tk.Button(
+        #     self.keypad_frame,
+        #     text='\u21a9',  # Undo symbol
+        #     font=('Arial', 20, 'bold'),
+        #     bg='#4facfe',
+        #     fg='white',
+        #     activebackground='#00f2fe',
+        #     activeforeground='white',
+        #     width=5,
+        #     height=2,
+        #     relief='flat',
+        #     cursor='hand2',
+        #     command=self.undo_last
+        # )
+        # undo_btn.grid(row=1, column=3, padx=5, pady=5)
+        
+        # # All button (clear all submitted values)
+        # all_btn = tk.Button(
+        #     self.keypad_frame,
+        #     text='ALL',
+        #     font=('Arial', 20, 'bold'),
+        #     bg='#4facfe',
+        #     fg='white',
+        #     activebackground='#00f2fe',
+        #     activeforeground='white',
+        #     width=5,
+        #     height=2,
+        #     relief='flat',
+        #     cursor='hand2',
+        #     command=self.clear_all
+        # )
+        # all_btn.grid(row=2, column=3, padx=5, pady=5)
+        
+        # Zero button
         zero_btn = tk.Button(
             self.keypad_frame,
             text='0',
@@ -85,30 +119,47 @@ class NumericalKeypad:
             fg='white',
             activebackground='#764ba2',
             activeforeground='white',
-            width=11,
+            width=5,
             height=2,
             relief='flat',
             cursor='hand2',
             command=lambda: self.add_digit('0')
         )
-        zero_btn.grid(row=3, column=1, columnspan=2, padx=5, pady=5)
+        zero_btn.grid(row=3, column=0, padx=5, pady=5)
         
-        # Enter button (spans 3 columns)
+        # Comma button
+        comma_btn = tk.Button(
+            self.keypad_frame,
+            text='.',
+            font=('Arial', 20, 'bold'),
+            bg='#667eea',
+            fg='white',
+            activebackground='#764ba2',
+            activeforeground='white',
+            width=5,
+            height=2,
+            relief='flat',
+            cursor='hand2',
+            command=lambda: self.add_digit('.')
+        )
+        comma_btn.grid(row=3, column=1, padx=5, pady=5)
+
+        # Enter button (spans 2 columns)
         enter_btn = tk.Button(
             self.keypad_frame,
             text='ENTER',
             font=('Arial', 20, 'bold'),
-            bg='#4facfe',
+            bg="#4ffe92",
             fg='white',
-            activebackground='#00f2fe',
+            activebackground="#00fe15",
             activeforeground='white',
-            width=17,
+            width=11,
             height=2,
             relief='flat',
             cursor='hand2',
             command=self.submit_input
         )
-        enter_btn.grid(row=4, column=0, columnspan=3, padx=5, pady=5)
+        enter_btn.grid(row=3, column=2, columnspan=2, padx=5, pady=5)
         
         # Output section
         output_frame = tk.Frame(self.container, bg='#f9f9f9', relief='solid', borderwidth=1)
@@ -140,6 +191,8 @@ class NumericalKeypad:
         self.root.bind('<Key>', self.on_key_press)
         
     def add_digit(self, digit):
+        if digit == '.' and self.current_input.find('.') != -1:
+            return
         self.current_input += digit
         self.update_display()
     
@@ -147,11 +200,30 @@ class NumericalKeypad:
         self.current_input = ""
         self.update_display()
     
+    def undo_last(self):
+        """Remove the last submitted value and update the output list."""
+        if self.submitted_values:
+            removed_value = self.submitted_values.pop()
+            print(f"UNDO: Removed value '{removed_value}'")
+            self.update_output_list()
+    
+    def clear_all(self):
+        """Submit a -1 meaning the calf has to drink all the milk"""
+        self.current_input = "-1"
+        self.submit_input()
+    
     def update_display(self):
         self.display.config(text=self.current_input)
     
     def submit_input(self):
         if self.current_input:
+            # particular cases
+            # if it starts (ends) with ., make it starts (ends) with 0
+            if self.current_input.startswith('.'):
+                self.current_input = '0' + self.current_input
+            elif self.current_input.endswith('.'):
+                self.current_input += '0'
+
             self.submitted_values.append(self.current_input)
             
             # Print to console
@@ -179,14 +251,14 @@ class NumericalKeypad:
         self.output_text.config(state='disabled')
     
     def on_key_press(self, event):
-        if event.char.isdigit():
+        if event.char.isdigit() or event.char == '.':
             self.add_digit(event.char)
         elif event.keysym == 'Return':
             self.submit_input()
         elif event.keysym == 'BackSpace':
             self.current_input = self.current_input[:-1]
             self.update_display()
-        elif event.keysym == 'Escape':
+        elif event.keysym == 'Delete':
             self.clear_display()
     
     def get_input(self):
