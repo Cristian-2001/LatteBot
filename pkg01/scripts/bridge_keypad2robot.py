@@ -2,6 +2,9 @@
 import configparser
 import os
 import json
+from queue import Queue
+from threading import Thread, Lock
+import time
 
 import paho.mqtt.client as paho
 from paho import mqtt
@@ -20,11 +23,22 @@ class Bridge():
 
         self.topic = self.config.get("MQTT", "Topic", fallback="Pickup-Site")
         
+        # Queue management (moved from pickup_site)
+        self.sequence_queue = Queue()
+        self.current_sequence_id = None
+        self.is_processing = False
+        self.queue_lock = Lock()
+        
         # Initialize ROS first
         self._init_rospy()
         
         # Then setup MQTT
         self._setupMQTT()
+        
+        # Start queue processor thread
+        self.processor_thread = Thread(target=self._process_queue, daemon=True)
+        self.processor_thread.start()
+        rospy.loginfo("\033[96m🔄 Queue processor thread started\033[0m")
 
     def _init_rospy(self):
         rospy.init_node('pickup_site_bridge', anonymous=True)
@@ -65,8 +79,8 @@ class Bridge():
         if rc == 0:
             rospy.loginfo("\033[92m✅ Successfully connected to MQTT broker\033[0m")
             
-            # Subscribe to single simplified topic with QoS 2
-            topic = f"{self.topic}/cow"
+            # Subscribe to sequence topic (entire sequences) with QoS 2
+            topic = f"{self.topic}/sequence"
             self.clientMQTT.subscribe(topic, qos=2)
             
             rospy.loginfo("\033[96m📬 Subscribed to MQTT topic: %s (QoS: 2)\033[0m", topic)
@@ -85,35 +99,121 @@ class Bridge():
 
     def _on_message(self, client, userdata, msg):
         """
-        Handle incoming MQTT messages and route them to ROS topics.
-        Simplified to handle single topic with JSON payload.
+        Handle incoming MQTT messages (complete sequences).
+        Add them to queue for ordered processing.
         """
         topic = msg.topic
         payload_raw = msg.payload.decode("utf-8")
         
         try:
-            # Parse JSON payload
-            payload = json.loads(payload_raw)
+            # Parse JSON payload (entire sequence)
+            sequence_data = json.loads(payload_raw)
             
-            cow_num = payload.get("cow_number", "?")
-            milk_liters = payload.get("milk_liters", 0.0)
-            sequence_id = payload.get("sequence_id", "unknown")
-            step = payload.get("step", "?")
-            total_steps = payload.get("total_steps", "?")
+            sequence_id = sequence_data.get("sequence_id", "unknown")
+            total_cows = sequence_data.get("total_cows", 0)
+            total_liters = sequence_data.get("total_liters", 0.0)
+            cows = sequence_data.get("cows", [])
             
-            rospy.loginfo("\033[92m🐄 Cow %s → %.1fL [%s/%s] (Seq: %s)\033[0m",
-                         cow_num, milk_liters, step, total_steps, sequence_id)
+            rospy.loginfo("\033[92m📨 Received sequence: %s (%d cows, %.1fL total)\033[0m",
+                         sequence_id, total_cows, total_liters)
             
-            # Publish to ROS cow data topic (JSON)
-            self.pub_cow.publish(payload_raw)
+            # Add sequence to processing queue
+            with self.queue_lock:
+                self.sequence_queue.put(sequence_data)
+                queue_size = self.sequence_queue.qsize()
             
-            # Publish to legacy topic (just cow number)
-            self.pub_legacy.publish(str(cow_num))
+            rospy.loginfo("\033[96m✅ Sequence queued (Queue size: %d)\033[0m", queue_size)
             
-        except json.JSONDecodeError:
-            # Fallback to legacy plain text mode
-            rospy.logwarn("\033[93m⚠️  Non-JSON payload (legacy): %s\033[0m", payload_raw)
-            self.pub_legacy.publish(payload_raw)
+        except json.JSONDecodeError as e:
+            rospy.logerr("\033[91m❌ Failed to parse sequence JSON: %s\033[0m", str(e))
+        except Exception as e:
+            rospy.logerr("\033[91m❌ Error handling message: %s\033[0m", str(e))
+    
+    def _process_queue(self):
+        """
+        Background thread that processes sequences from the queue.
+        Publishes individual cow messages to ROS topics in order.
+        """
+        rospy.loginfo("\033[96m🔄 Queue processor thread started\033[0m")
+        
+        while not rospy.is_shutdown():
+            try:
+                # Wait for a sequence from the queue (blocking with timeout)
+                try:
+                    sequence_data = self.sequence_queue.get(timeout=1.0)
+                except:
+                    continue  # Timeout, check again
+                
+                # Extract metadata
+                sequence_id = sequence_data.get("sequence_id", "unknown")
+                cows = sequence_data.get("cows", [])
+                total_cows = len(cows)
+                total_liters = sequence_data.get("total_liters", 0.0)
+                
+                with self.queue_lock:
+                    self.is_processing = True
+                    self.current_sequence_id = sequence_id
+                
+                rospy.loginfo("\033[96m" + "="*70 + "\033[0m")
+                rospy.loginfo("\033[92m🚀 Processing sequence: %s\033[0m", sequence_id)
+                rospy.loginfo("\033[92m� %d cows - %.1fL total\033[0m", total_cows, total_liters)
+                rospy.loginfo("\033[96m" + "="*70 + "\033[0m")
+                
+                # Process each cow in the sequence
+                for idx, cow_data in enumerate(cows, 1):
+                    cow_num = cow_data.get("cow")
+                    milk_liters = cow_data.get("liters")
+                    
+                    rospy.loginfo("\033[92m[%d/%d] Cow %s → %.1fL\033[0m",
+                                 idx, total_cows, cow_num, milk_liters)
+                    
+                    # Create payload for ROS
+                    payload = {
+                        "cow_number": cow_num,
+                        "milk_liters": milk_liters,
+                        "sequence_id": sequence_id,
+                        "step": idx,
+                        "total_steps": total_cows
+                    }
+                    
+                    payload_json = json.dumps(payload)
+                    
+                    # Publish to ROS cow data topic
+                    self.pub_cow.publish(payload_json)
+                    
+                    # Publish to legacy topic (just cow number)
+                    self.pub_legacy.publish(str(cow_num))
+                    
+                    rospy.loginfo("\033[90m   → Published to ROS topics\033[0m")
+                    
+                    # Optional: Add delay between cows if needed
+                    # rospy.sleep(0.5)
+                
+                rospy.loginfo("\033[96m" + "="*70 + "\033[0m")
+                rospy.loginfo("\033[92m✅ Sequence %s completed\033[0m", sequence_id)
+                rospy.loginfo("\033[96m" + "="*70 + "\033[0m\n")
+                
+                with self.queue_lock:
+                    self.is_processing = False
+                    self.current_sequence_id = None
+                
+                # Mark task as done
+                self.sequence_queue.task_done()
+                
+            except Exception as e:
+                rospy.logerr("\033[91m❌ Error processing sequence: %s\033[0m", str(e))
+                with self.queue_lock:
+                    self.is_processing = False
+                    self.current_sequence_id = None
+    
+    def get_queue_status(self):
+        """Return current queue status"""
+        with self.queue_lock:
+            return {
+                "is_processing": self.is_processing,
+                "queue_size": self.sequence_queue.qsize(),
+                "current_sequence_id": self.current_sequence_id
+            }
 
 
 
