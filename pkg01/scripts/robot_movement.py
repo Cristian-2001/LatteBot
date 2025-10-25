@@ -68,6 +68,60 @@ class RobotMovementPipeline:
                 rate.sleep()
         
         rospy.loginfo("Robot listener node started, waiting for calf numbers...")
+
+    def _base2cow(self, cow_num_end):
+        sequence_base2cow = [
+            ("manipulator", INTERMEDIATE_GRASP),
+            ("gripper", OPEN),
+            ("manipulator", GRASP),
+            ("gripper", CLOSE),
+            ("manipulator", INTERMEDIATE_GRASP),
+            ("platform", cow_num_end),
+            ("manipulator", INTERMEDIATE_PLACE),
+            ("manipulator", PLACE),
+            ("gripper", OPEN),
+            ("manipulator", INTERMEDIATE_PLACE),
+            ("manipulator", HOME)
+        ]
+
+        return sequence_base2cow
+    
+    def _cow2cow(self, cow_num_start, cow_num_end):
+        sequence_cow2cow = [
+            ("platform", cow_num_start),
+            ("manipulator", INTERMEDIATE_PLACE),
+            ("gripper", OPEN),
+            ("manipulator", PLACE),
+            ("gripper", CLOSE),
+            ("manipulator", INTERMEDIATE_PLACE),
+            ("manipulator", INTERMEDIATE_GRASP),
+            ("platform", cow_num_end),
+            ("manipulator", INTERMEDIATE_PLACE),
+            ("manipulator", PLACE),
+            ("gripper", OPEN),
+            ("manipulator", INTERMEDIATE_PLACE)
+            ("manipulator", HOME)
+        ]
+
+        return sequence_cow2cow
+    
+    def _cow2base(self, cow_num_start):
+        sequence_cow2base = [
+            ("platform", cow_num_start),
+            ("gripper", OPEN),
+            ("manipulator", INTERMEDIATE_PLACE),
+            ("manipulator", PLACE),
+            ("gripper", CLOSE),
+            ("manipulator", INTERMEDIATE_PLACE),
+            ("manipulator", INTERMEDIATE_GRASP),
+            ("platform", self.home_position),
+            ("manipulator", GRASP),
+            ("gripper", OPEN),
+            ("manipulator", INTERMEDIATE_GRASP)
+            ("manipulator", HOME)
+        ]
+
+        return sequence_cow2base
     
     def _get_calf_position(self, calf_num: str):
         """Map calf number to platform position and move."""
@@ -153,7 +207,7 @@ class RobotMovementPipeline:
             rospy.logerr(f"Error moving gripper to {pose}: {e}")
             return False
 
-    def process(self, calf_num_msg):
+    def process(self, calf_num_msg, task):
         """Implements the order of operations the robot has to do"""
         # get the calf_number
         calf_num = str(calf_num_msg.data)
@@ -182,19 +236,15 @@ class RobotMovementPipeline:
                 rate.sleep()
 
         # Execute movement sequence
-        sequence = [
-            ("manipulator", INTERMEDIATE_GRASP),
-            ("gripper", OPEN),
-            ("manipulator", GRASP),
-            ("gripper", CLOSE),  # Use handle-specific position (0.55 rad) instead of full close
-            ("manipulator", INTERMEDIATE_GRASP),
-            ("platform", calf_position),
-            ("manipulator", INTERMEDIATE_PLACE),
-            ("manipulator", PLACE),
-            ("gripper", OPEN),
-            ("manipulator", INTERMEDIATE_PLACE),
-            ("manipulator", HOME)
-        ]
+        if task == "base2cow":
+            sequence = self._base2cow(calf_num)
+        elif task == "cow2cow":
+            sequence = self._cow2cow(calf_num, calf_num) #FIXME
+        elif task == "cow2base":
+            sequence = self._cow2base(calf_num)
+        else:
+            print("ERROR: wrong task")
+            return -1
         
         for action_type, target in sequence:
             rospy.loginfo(f"Executing {action_type} to {target}")
