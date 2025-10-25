@@ -1,41 +1,94 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 
-class NumericalKeypad:
-    def __init__(self, root, callback=None):
+class CowMilkInterface:
+    def __init__(self, root, callback=None, sequence_callback=None, used_cows_getter=None):
         self.root = root
-        self.root.title("Numerical Keypad")
-        self.root.geometry("600x800")
+        self.root.title("Milking Sequence Planner")
+        
+        # Set window size to fit all content without scrolling
+        # Width: 900px, Height: 950px (adjusted to show everything)
+        self.root.geometry("900x950")
+        
+        # Center window on screen
+        self.root.update_idletasks()
+        width = 900
+        height = 950
+        x = (self.root.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.root.winfo_screenheight() // 2) - (height // 2)
+        self.root.geometry(f'{width}x{height}+{x}+{y}')
+        
         self.root.configure(bg='#667eea')
         
         self.current_input = ""
-        self.submitted_values = []
-        self.callback = callback  # Callback function to handle submitted input
+        self.sequence = []  # Lista di tuple (cow_number, milk_quantity)
+        self.callback = callback  # Callback per singola aggiunta
+        self.sequence_callback = sequence_callback  # Callback per sequenza completa
+        self.used_cows_getter = used_cows_getter  # Function to get globally used cows
         
         # Create main container
-        self.container = tk.Frame(root, bg='white', padx=30, pady=30)
+        self.container = tk.Frame(root, bg='white', padx=40, pady=40)
         self.container.pack(expand=True, fill='both', padx=20, pady=20)
         
-        # Create display
+        # ===== COW SELECTION SECTION =====
+        cow_frame = tk.Frame(self.container, bg='white')
+        cow_frame.pack(fill='x', pady=(0, 15))
+        
+        cow_label = tk.Label(
+            cow_frame,
+            text="Select Cow:",
+            font=('Arial', 12, 'bold'),
+            bg='white',
+            fg='#333'
+        )
+        cow_label.pack(anchor='w', pady=(0, 8))
+        
+        # Dropdown for cow selection
+        self.cow_var = tk.StringVar()
+        self.cow_dropdown = ttk.Combobox(
+            cow_frame,
+            textvariable=self.cow_var,
+            values=[f"Cow {i}" for i in range(10)],
+            state='readonly',
+            font=('Arial', 16),
+            width=25
+        )
+        self.cow_dropdown.pack(fill='x')
+        self.cow_dropdown.current(0)  # Set default selection
+        
+        # ===== MILK QUANTITY SECTION =====
+        milk_frame = tk.Frame(self.container, bg='white')
+        milk_frame.pack(fill='x', pady=(0, 15))
+        
+        milk_label = tk.Label(
+            milk_frame,
+            text="Liters of Milk per Cow: (max 10L per cow | max 10L total sequence)",
+            font=('Arial', 11, 'bold'),
+            bg='white',
+            fg='#333'
+        )
+        milk_label.pack(anchor='w', pady=(0, 8))
+        
+        # Display for milk quantity
         self.display = tk.Label(
-            self.container,
-            text="",
-            font=('Arial', 24),
+            milk_frame,
+            text="0",
+            font=('Arial', 24, 'bold'),
             bg='#f0f0f0',
             fg='#333',
             anchor='e',
-            padx=20,
-            pady=20,
+            padx=15,
+            pady=15,
             relief='solid',
             borderwidth=2
         )
-        self.display.pack(fill='x', pady=(0, 20))
+        self.display.pack(fill='x', pady=(0, 15))
         
         # Create keypad frame
-        self.keypad_frame = tk.Frame(self.container, bg='white')
+        self.keypad_frame = tk.Frame(milk_frame, bg='white')
         self.keypad_frame.pack()
         
-        # Create number buttons
+        # Create number buttons (3x3 grid for 1-9)
         buttons = [
             ('1', 0, 0), ('2', 0, 1), ('3', 0, 2),
             ('4', 1, 0), ('5', 1, 1), ('6', 1, 2),
@@ -46,151 +99,197 @@ class NumericalKeypad:
             btn = tk.Button(
                 self.keypad_frame,
                 text=text,
-                font=('Arial', 20, 'bold'),
+                font=('Arial', 16, 'bold'),
                 bg='#667eea',
                 fg='white',
                 activebackground='#764ba2',
                 activeforeground='white',
-                width=5,
-                height=2,
+                width=4,
+                height=1,
                 relief='flat',
                 cursor='hand2',
                 command=lambda t=text: self.add_digit(t)
             )
-            btn.grid(row=row, column=col, padx=5, pady=5)
+            btn.grid(row=row, column=col, padx=4, pady=4, sticky='nsew')
         
-        # Clear button
-        clear_btn = tk.Button(
-            self.keypad_frame,
-            text='C',
-            font=('Arial', 20, 'bold'),
-            bg='#f5576c',
-            fg='white',
-            activebackground="#ff0000",
-            activeforeground='white',
-            width=5,
-            height=2,
-            relief='flat',
-            cursor='hand2',
-            command=self.clear_display
-        )
-        clear_btn.grid(row=0, column=3, padx=5, pady=5)
-        
-        # Undo button
-        # undo_btn = tk.Button(
-        #     self.keypad_frame,
-        #     text='\u21a9',  # Undo symbol
-        #     font=('Arial', 20, 'bold'),
-        #     bg='#4facfe',
-        #     fg='white',
-        #     activebackground='#00f2fe',
-        #     activeforeground='white',
-        #     width=5,
-        #     height=2,
-        #     relief='flat',
-        #     cursor='hand2',
-        #     command=self.undo_last
-        # )
-        # undo_btn.grid(row=1, column=3, padx=5, pady=5)
-        
-        # # All button (clear all submitted values)
-        # all_btn = tk.Button(
-        #     self.keypad_frame,
-        #     text='ALL',
-        #     font=('Arial', 20, 'bold'),
-        #     bg='#4facfe',
-        #     fg='white',
-        #     activebackground='#00f2fe',
-        #     activeforeground='white',
-        #     width=5,
-        #     height=2,
-        #     relief='flat',
-        #     cursor='hand2',
-        #     command=self.clear_all
-        # )
-        # all_btn.grid(row=2, column=3, padx=5, pady=5)
-        
-        # Zero button
+        # Zero button (spans 2 columns horizontally)
         zero_btn = tk.Button(
             self.keypad_frame,
             text='0',
-            font=('Arial', 20, 'bold'),
+            font=('Arial', 16, 'bold'),
             bg='#667eea',
             fg='white',
             activebackground='#764ba2',
             activeforeground='white',
-            width=5,
-            height=2,
+            width=4,
+            height=1,
             relief='flat',
             cursor='hand2',
             command=lambda: self.add_digit('0')
         )
-        zero_btn.grid(row=3, column=0, padx=5, pady=5)
+        zero_btn.grid(row=3, column=0, columnspan=2, padx=4, pady=4, sticky='ew')
         
-        # Comma button
-        comma_btn = tk.Button(
+        # Decimal point button
+        decimal_btn = tk.Button(
             self.keypad_frame,
             text='.',
-            font=('Arial', 20, 'bold'),
+            font=('Arial', 16, 'bold'),
             bg='#667eea',
             fg='white',
             activebackground='#764ba2',
             activeforeground='white',
-            width=5,
-            height=2,
+            width=4,
+            height=1,
             relief='flat',
             cursor='hand2',
             command=lambda: self.add_digit('.')
         )
-        comma_btn.grid(row=3, column=1, padx=5, pady=5)
-
-        # Enter button (spans 2 columns)
-        enter_btn = tk.Button(
+        decimal_btn.grid(row=3, column=2, padx=4, pady=4, sticky='nsew')
+        
+        # Clear button (spans 2 rows vertically on the right)
+        clear_btn = tk.Button(
             self.keypad_frame,
-            text='ENTER',
-            font=('Arial', 20, 'bold'),
+            text='C',
+            font=('Arial', 18, 'bold'),
+            bg='#f5576c',
+            fg='white',
+            activebackground="#ff0000",
+            activeforeground='white',
+            width=4,
+            relief='flat',
+            cursor='hand2',
+            command=self.clear_display
+        )
+        clear_btn.grid(row=0, column=3, rowspan=2, padx=4, pady=4, sticky='nsew')
+        
+        # Add to sequence button (spans 2 rows vertically on the right)
+        add_btn = tk.Button(
+            self.keypad_frame,
+            text='ADD',
+            font=('Arial', 14, 'bold'),
             bg="#4ffe92",
             fg='white',
             activebackground="#00fe15",
             activeforeground='white',
-            width=11,
-            height=2,
+            width=4,
             relief='flat',
             cursor='hand2',
-            command=self.submit_input
+            command=self.add_to_sequence
         )
-        enter_btn.grid(row=3, column=2, columnspan=2, padx=5, pady=5)
+        add_btn.grid(row=2, column=3, rowspan=2, padx=4, pady=4, sticky='nsew')
         
-        # Output section
-        output_frame = tk.Frame(self.container, bg='#f9f9f9', relief='solid', borderwidth=1)
-        output_frame.pack(fill='both', expand=True, pady=(20, 0))
+        # ===== SEQUENCE DISPLAY SECTION =====
+        sequence_frame = tk.Frame(self.container, bg='#f9f9f9', relief='solid', borderwidth=2)
+        sequence_frame.pack(fill='both', expand=True, pady=(15, 0))
         
-        output_title = tk.Label(
-            output_frame,
-            text="Submitted Values:",
-            font=('Arial', 12, 'bold'),
-            bg='#f9f9f9',
-            fg='#667eea',
+        # Header with title and counter
+        header_frame = tk.Frame(sequence_frame, bg='#667eea')
+        header_frame.pack(fill='x')
+        
+        sequence_title = tk.Label(
+            header_frame,
+            text="Planned Sequence:",
+            font=('Arial', 13, 'bold'),
+            bg='#667eea',
+            fg='white',
             anchor='w'
         )
-        output_title.pack(fill='x', padx=15, pady=(10, 5))
+        sequence_title.pack(side='left', padx=15, pady=8)
         
-        # Create scrollable output list
-        self.output_text = tk.Text(
-            output_frame,
-            font=('Arial', 11),
-            bg='#f9f9f9',
-            fg='#555',
-            height=6,
-            relief='flat',
-            state='disabled'
+        self.sequence_counter = tk.Label(
+            header_frame,
+            text="0 cows",
+            font=('Arial', 11, 'bold'),
+            bg='#667eea',
+            fg='white',
+            anchor='e'
         )
-        self.output_text.pack(fill='both', expand=True, padx=15, pady=(0, 10))
+        self.sequence_counter.pack(side='right', padx=15, pady=8)
+        
+        # Scrollable listbox with sequence
+        list_frame = tk.Frame(sequence_frame, bg='#f9f9f9')
+        list_frame.pack(fill='both', expand=True, padx=10, pady=10)
+        
+        # Create listbox with scrollbar
+        scrollbar = tk.Scrollbar(list_frame)
+        scrollbar.pack(side='right', fill='y')
+        
+        self.sequence_listbox = tk.Listbox(
+            list_frame,
+            font=('Arial', 11),
+            bg='white',
+            fg='#333',
+            selectmode=tk.SINGLE,
+            yscrollcommand=scrollbar.set,
+            relief='flat',
+            borderwidth=0,
+            highlightthickness=1,
+            highlightbackground='#ccc',
+            activestyle='none'
+        )
+        self.sequence_listbox.pack(side='left', fill='both', expand=True)
+        scrollbar.config(command=self.sequence_listbox.yview)
+        
+        # Button frame at bottom (only for editing sequence)
+        button_frame = tk.Frame(sequence_frame, bg='#f9f9f9')
+        button_frame.pack(fill='x', padx=10, pady=(0, 10))
+        
+        # Remove selected button
+        remove_btn = tk.Button(
+            button_frame,
+            text='Remove Selected',
+            font=('Arial', 11, 'bold'),
+            bg='#f5576c',
+            fg='white',
+            activebackground='#ff0000',
+            activeforeground='white',
+            relief='flat',
+            cursor='hand2',
+            command=self.remove_selected
+        )
+        remove_btn.pack(side='left', padx=(0, 5), pady=5, fill='x', expand=True)
+        
+        # Clear all button
+        clear_all_btn = tk.Button(
+            button_frame,
+            text='Clear All',
+            font=('Arial', 11, 'bold'),
+            bg='#ff8c42',
+            fg='white',
+            activebackground='#ff6600',
+            activeforeground='white',
+            relief='flat',
+            cursor='hand2',
+            command=self.clear_sequence
+        )
+        clear_all_btn.pack(side='left', padx=5, pady=5, fill='x', expand=True)
+        
+        # ===== BIG START BUTTON AT BOTTOM (outside container, directly in root) =====
+        start_frame = tk.Frame(self.root, bg='white')
+        start_frame.pack(side='bottom', fill='x', padx=0, pady=0)
+        
+        # Start sequence button (BIG and PROMINENT at bottom)
+        self.start_btn = tk.Button(
+            start_frame,
+            text='▶ START SEQUENCE',
+            font=('Arial', 18, 'bold'),
+            bg='#00c853',
+            fg='white',
+            activebackground='#00e676',
+            activeforeground='white',
+            relief='raised',
+            borderwidth=4,
+            cursor='hand2',
+            command=self.start_sequence,
+            pady=20
+        )
+        self.start_btn.pack(fill='both', expand=True, padx=0, pady=0)
         
         # Bind keyboard events
         self.root.bind('<Key>', self.on_key_press)
         
     def add_digit(self, digit):
+        # Prevent multiple decimal points
         if digit == '.' and self.current_input.find('.') != -1:
             return
         self.current_input += digit
@@ -200,91 +299,281 @@ class NumericalKeypad:
         self.current_input = ""
         self.update_display()
     
-    def undo_last(self):
-        """Remove the last submitted value and update the output list."""
-        if self.submitted_values:
-            removed_value = self.submitted_values.pop()
-            print(f"UNDO: Removed value '{removed_value}'")
-            self.update_output_list()
-    
-    def clear_all(self):
-        """Submit a -1 meaning the calf has to drink all the milk"""
-        self.current_input = "-1"
-        self.submit_input()
-    
     def update_display(self):
-        self.display.config(text=self.current_input)
+        display_text = self.current_input if self.current_input else "0"
+        self.display.config(text=display_text)
+    
+    def add_to_sequence(self):
+        """Add current cow and milk quantity to the sequence"""
+        # Get selected cow number (extract number from "Cow X" or "Cow X ✓")
+        cow_text = self.cow_var.get()
+        cow_selection = int(cow_text.split()[1])  # Extract number from "Cow X" or "Cow X ✓"
+        
+        # Get milk quantity
+        milk_quantity = self.current_input if self.current_input else "0"
+        
+        # Validate milk quantity
+        try:
+            milk_float = float(milk_quantity)
+            if milk_float <= 0:
+                messagebox.showwarning("Invalid Value", "Liters must be greater than zero!")
+                return
+            if milk_float > 10:
+                messagebox.showwarning(
+                    "Limit Exceeded", 
+                    f"Maximum limit is 10 liters per cow!\nYou entered: {milk_float} liters"
+                )
+                return
+        except ValueError:
+            messagebox.showwarning("Invalid Value", "Please enter a valid number for liters!")
+            return
+        
+        # Check total sequence limit (10L total for entire sequence)
+        current_total = sum(float(liters) for _, liters in self.sequence)
+        new_total = current_total + milk_float
+        if new_total > 10:
+            messagebox.showwarning(
+                "Sequence Limit Exceeded",
+                f"Maximum total for sequence is 10 liters!\n\n"
+                f"Current total: {current_total:.1f}L\n"
+                f"Trying to add: {milk_float:.1f}L\n"
+                f"Would be: {new_total:.1f}L (exceeds 10L limit)\n\n"
+                f"Remove some cows or reduce quantities."
+            )
+            return
+        
+        # Check if cow is already in current sequence
+        existing_cows = [cow_num for cow_num, _ in self.sequence]
+        if cow_selection in existing_cows:
+            messagebox.showwarning(
+                "Cow Already Added",
+                f"Cow {cow_selection} is already in the current sequence!\n\n"
+                f"Each cow can only be added once per sequence.\n"
+                f"Remove the cow from the list first if you want to change the liters."
+            )
+            return
+        
+        # Check if cow was used in previous sequences (global check)
+        if self.used_cows_getter:
+            globally_used_cows = self.used_cows_getter()
+            if cow_selection in globally_used_cows:
+                messagebox.showerror(
+                    "Cow Already Processed",
+                    f"Cow {cow_selection} was already processed in a previous sequence!\n\n"
+                    f"❌ You cannot reuse cows that have been started in previous sequences.\n\n"
+                    f"Globally used cows: {sorted(globally_used_cows)}"
+                )
+                return
+        
+        # Handle edge cases for decimal point
+        if milk_quantity.startswith('.'):
+            milk_quantity = '0' + milk_quantity
+        elif milk_quantity.endswith('.'):
+            milk_quantity += '0'
+        
+        # Add to sequence
+        self.sequence.append((cow_selection, milk_quantity))
+        
+        # Call the callback function for single addition
+        if self.callback:
+            self.callback(cow_selection, milk_quantity)
+        
+        # Update display
+        self.update_sequence_display()
+        
+        # Clear milk input for next entry
+        self.current_input = ""
+        self.update_display()
+        
+        # Show confirmation
+        print(f"✓ Added: Cow {cow_selection} - {milk_quantity} liters")
+        
+        # Update available cows in dropdown (optional: highlight used cows)
+        self.update_cow_dropdown_colors()
+    
+    def update_sequence_display(self):
+        """Update the listbox showing the sequence"""
+        # Clear listbox
+        self.sequence_listbox.delete(0, tk.END)
+        
+        # Add all items in sequence
+        for idx, (cow_num, liters) in enumerate(self.sequence, 1):
+            item_text = f"{idx}. Cow {cow_num} → {liters} liters"
+            self.sequence_listbox.insert(tk.END, item_text)
+        
+        # Calculate total liters
+        total_liters = sum(float(liters) for _, liters in self.sequence)
+        
+        # Update counter with total liters
+        count = len(self.sequence)
+        counter_text = f"{count} cow" if count == 1 else f"{count} cows"
+        counter_text += f" | {total_liters:.1f}L / 10L"
+        self.sequence_counter.config(text=counter_text)
+    
+    def update_cow_dropdown_colors(self):
+        """Update dropdown to show which cows are in the current sequence and globally used"""
+        # Get cows in current sequence
+        used_in_sequence = [cow_num for cow_num, _ in self.sequence]
+        
+        # Get globally used cows from previous sequences
+        globally_used = []
+        if self.used_cows_getter:
+            globally_used = self.used_cows_getter()
+        
+        # Update dropdown values with indicators
+        new_values = []
+        for i in range(10):
+            if i in globally_used:
+                # Cow was used in previous sequences (cannot be selected)
+                new_values.append(f"Cow {i} ❌")
+            elif i in used_in_sequence:
+                # Cow is in current sequence
+                new_values.append(f"Cow {i} ✓")
+            else:
+                # Cow is available
+                new_values.append(f"Cow {i}")
+        
+        self.cow_dropdown['values'] = new_values
+        
+        # Reset selection to first available cow (not globally used, not in sequence)
+        for i in range(10):
+            if i not in globally_used and i not in used_in_sequence:
+                self.cow_dropdown.current(i)
+                break
+    
+    def remove_selected(self):
+        """Remove selected item from sequence"""
+        selection = self.sequence_listbox.curselection()
+        if selection:
+            idx = selection[0]
+            removed = self.sequence.pop(idx)
+            self.update_sequence_display()
+            self.update_cow_dropdown_colors()
+            print(f"✗ Removed: Cow {removed[0]} - {removed[1]} liters")
+        else:
+            messagebox.showinfo("No Selection", "Select an item from the list to remove")
+    
+    def clear_sequence(self):
+        """Clear entire sequence"""
+        if self.sequence:
+            response = messagebox.askyesno(
+                "Confirm Clear",
+                f"Do you want to clear the entire sequence ({len(self.sequence)} cows)?"
+            )
+            if response:
+                self.sequence.clear()
+                self.update_sequence_display()
+                self.update_cow_dropdown_colors()
+                print("✗ Sequence completely cleared")
+        else:
+            messagebox.showinfo("Empty Sequence", "There are no items to clear")
+    
+    def start_sequence(self):
+        """Start the robot sequence with all planned cows"""
+        if not self.sequence:
+            messagebox.showwarning("Empty Sequence", "Add at least one cow to the sequence!")
+            return
+        
+        # Confirm before starting
+        response = messagebox.askyesno(
+            "Start Sequence",
+            f"Start sequence with {len(self.sequence)} cows?\n\n" +
+            "\n".join([f"Cow {cow} → {liters}L" for cow, liters in self.sequence])
+        )
+        
+        if response:
+            print("\n" + "="*50)
+            print("🚀 STARTING MILKING SEQUENCE")
+            print("="*50)
+            
+            # Call sequence callback with complete sequence
+            if self.sequence_callback:
+                self.sequence_callback(self.sequence.copy())
+            
+            # Print sequence details
+            for idx, (cow_num, liters) in enumerate(self.sequence, 1):
+                print(f"  {idx}. Cow {cow_num} → {liters} liters")
+            
+            print("="*50 + "\n")
+            
+            # Clear the current sequence after starting
+            # (cows are now tracked globally by pickup_site)
+            self.sequence.clear()
+            self.update_sequence_display()
+            self.update_cow_dropdown_colors()
+            
+            # Show success message
+            messagebox.showinfo(
+                "Sequence Started",
+                f"Sequence sent to robot!\n\n"
+                f"You can now plan a new sequence with remaining cows."
+            )
     
     def submit_input(self):
-        if self.current_input:
-            # particular cases
-            # if it starts (ends) with ., make it starts (ends) with 0
-            if self.current_input.startswith('.'):
-                self.current_input = '0' + self.current_input
-            elif self.current_input.endswith('.'):
-                self.current_input += '0'
-
-            self.submitted_values.append(self.current_input)
-            
-            # Print to console
-            print(f"INPUT: {self.current_input}")
-            
-            # Call the callback function with the submitted value
-            if self.callback:
-                self.callback(self.current_input)
-            
-            # Update output list
-            self.update_output_list()
-            
-            # Clear for next input
-            self.current_input = ""
-            self.update_display()
-    
-    def update_output_list(self):
-        self.output_text.config(state='normal')
-        self.output_text.delete('1.0', tk.END)
-        
-        # Show last 10 values in reverse order
-        for value in reversed(self.submitted_values[-10:]):
-            self.output_text.insert(tk.END, value + '\n')
-        
-        self.output_text.config(state='disabled')
+        """Legacy method - redirects to add_to_sequence"""
+        self.add_to_sequence()
     
     def on_key_press(self, event):
         if event.char.isdigit() or event.char == '.':
             self.add_digit(event.char)
         elif event.keysym == 'Return':
-            self.submit_input()
+            self.add_to_sequence()
         elif event.keysym == 'BackSpace':
             self.current_input = self.current_input[:-1]
             self.update_display()
         elif event.keysym == 'Delete':
             self.clear_display()
     
+    def get_sequence(self):
+        """
+        Method to get the complete sequence.
+        Returns list of tuples: [(cow_number, milk_quantity), ...]
+        """
+        return self.sequence.copy()
+    
     def get_input(self):
         """
-        Method to get the last submitted value.
-        Returns None if no values have been submitted.
+        Legacy method - returns last item in sequence if exists.
         """
-        return self.submitted_values[-1] if self.submitted_values else None
+        if self.sequence:
+            cow, liters = self.sequence[-1]
+            return f"Mucca {cow}: {liters} litri"
+        return None
     
     def get_all_inputs(self):
         """
-        Method to get all submitted values.
+        Legacy method - returns all sequence items as formatted strings.
         """
-        return self.submitted_values.copy()
+        return [f"Mucca {cow}: {liters} litri" for cow, liters in self.sequence]
+
 
 def main():
-    # Define what happens when user submits input
-    def on_input_received(value):
-        print(f"Received value: {value}")
-        # Do whatever you want with the value here
-        # For example: process it, save it, use it in calculations, etc.
+    # Define what happens when user adds a single cow
+    def on_cow_added(cow_number, milk_quantity):
+        print(f"➕ Aggiunto - Mucca: {cow_number}, Litri: {milk_quantity}")
+    
+    # Define what happens when user starts the complete sequence
+    def on_sequence_start(sequence):
+        print("\n🤖 ROBOT RICEVE SEQUENZA:")
+        print("-" * 40)
+        for idx, (cow_num, liters) in enumerate(sequence, 1):
+            print(f"  Passo {idx}: Mungere Mucca {cow_num} → {liters} litri")
+        print("-" * 40)
+        print(f"Totale operazioni: {len(sequence)}")
+        print()
+        
+        # Qui puoi aggiungere la logica per inviare la sequenza al robot ROS
+        # Esempio:
+        # robot_controller.execute_milking_sequence(sequence)
     
     root = tk.Tk()
-    keypad = NumericalKeypad(root, callback=on_input_received)
-    
+    interface = CowMilkInterface(
+        root, 
+        callback=on_cow_added,
+        sequence_callback=on_sequence_start
+    )
     root.mainloop()
+
 
 if __name__ == "__main__":
     main()
