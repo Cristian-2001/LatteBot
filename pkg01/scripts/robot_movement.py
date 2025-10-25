@@ -43,9 +43,9 @@ class RobotMovementPipeline:
             self._joint_state_callback
         )
         
-        # Subscribe to cow numbers
-        self.cow_sub = rospy.Subscriber(
-            'cow_num', 
+        # Subscribe to calf numbers
+        self.calf_sub = rospy.Subscriber(
+            'calf_num', 
             String, 
             self.process
         )
@@ -67,20 +67,20 @@ class RobotMovementPipeline:
                     return
                 rate.sleep()
         
-        rospy.loginfo("Robot listener node started, waiting for cow numbers...")
+        rospy.loginfo("Robot listener node started, waiting for calf numbers...")
     
-    def _get_cow_position(self, cow_num: str):
-        """Map cow number to platform position and move."""
+    def _get_calf_position(self, calf_num: str):
+        """Map calf number to platform position and move."""
         try:
-            num = int(cow_num)
+            num = int(calf_num)
             if 0 <= num <= 10:
-                position = float(num)  # TODO: Map to actual cow positions
+                position = float(num)  # TODO: Map to actual calf positions
                 return position
             else:
                 rospy.logwarn("Cow number out of range (0-10). Returning home")
                 return -1
         except ValueError:
-            rospy.logwarn("Invalid cow number received. Returning home")
+            rospy.logwarn("Invalid calf number received. Returning home")
             return -1
         
     def _go_home(self):
@@ -153,15 +153,15 @@ class RobotMovementPipeline:
             rospy.logerr(f"Error moving gripper to {pose}: {e}")
             return False
 
-    def process(self, cow_num_msg):
+    def process(self, calf_num_msg):
         """Implements the order of operations the robot has to do"""
-        # get the cow_number
-        cow_num = str(cow_num_msg.data)
+        # get the calf_number
+        calf_num = str(calf_num_msg.data)
 
-        cow_position = self._get_cow_position(cow_num)
-        if cow_position == -1:
+        calf_position = self._get_calf_position(calf_num)
+        if calf_position == -1:
             # invalid position, returns -1
-            print(f"Invalid cow position: {cow_position}")
+            print(f"Invalid calf position: {calf_position}")
             return
 
         # check if the platform is in home position, otherwise move it there
@@ -188,7 +188,7 @@ class RobotMovementPipeline:
             ("manipulator", GRASP),
             ("gripper", CLOSE),  # Use handle-specific position (0.55 rad) instead of full close
             ("manipulator", INTERMEDIATE_GRASP),
-            ("platform", cow_position),
+            ("platform", calf_position),
             ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", PLACE),
             ("gripper", OPEN),
