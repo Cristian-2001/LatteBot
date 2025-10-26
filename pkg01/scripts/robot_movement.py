@@ -71,7 +71,7 @@ class RobotMovementPipeline:
 
     def _base2cow(self, cow_pos_end):
         sequence_base2cow = [
-            ("platform", self.home_position)
+            ("platform", self.home_position),
             ("manipulator", INTERMEDIATE_GRASP),
             ("gripper", OPEN),
             ("manipulator", GRASP),
@@ -100,7 +100,7 @@ class RobotMovementPipeline:
             ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", PLACE),
             ("gripper", OPEN),
-            ("manipulator", INTERMEDIATE_PLACE)
+            ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", HOME)
         ]
 
@@ -119,7 +119,7 @@ class RobotMovementPipeline:
             ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", PLACE),
             ("gripper", OPEN),
-            ("manipulator", INTERMEDIATE_PLACE)
+            ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", HOME)
         ]
 
