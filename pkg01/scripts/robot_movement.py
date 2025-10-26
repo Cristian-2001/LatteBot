@@ -116,9 +116,10 @@ class RobotMovementPipeline:
             ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", INTERMEDIATE_GRASP),
             ("platform", self.home_position),
-            ("manipulator", GRASP),
+            ("manipulator", INTERMEDIATE_PLACE),
+            ("manipulator", PLACE),
             ("gripper", OPEN),
-            ("manipulator", INTERMEDIATE_GRASP)
+            ("manipulator", INTERMEDIATE_PLACE)
             ("manipulator", HOME)
         ]
 

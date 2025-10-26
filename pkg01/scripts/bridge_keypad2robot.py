@@ -123,7 +123,7 @@ class Bridge():
             self._on_calf_message(topic, payload_raw)
 
     def _on_platform_message(self, payload_raw):
-        if self.platform_sequece is None:
+        if self.platform_sequece is not None:
             rospy.logerr("\033[91mError: platform not free\033[0m")
             return
         
@@ -252,6 +252,9 @@ class Bridge():
                 
                 # Mark task as done
                 self.sequence_queue.task_done()
+
+                # if it was a platform task, mark the platform free
+                self.platform_sequece = None
                 
             except Exception as e:
                 rospy.logerr("\033[91m❌ Error processing sequence: %s\033[0m", str(e))
