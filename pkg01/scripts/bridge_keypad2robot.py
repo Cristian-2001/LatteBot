@@ -208,7 +208,7 @@ class Bridge():
                 # get the ending calf number (-1 if platform)
                 calf_num_end = cows[0]["cow"]
 
-                self.pub_legacy.publish(f"{calf_num_start}-{calf_num_end}")
+                self.pub_legacy.publish(f"{calf_num_start}_{calf_num_end}")
 
                 rospy.loginfo("\033[96m📤 Published: %s → %s\033[0m", calf_num_start, calf_num_end)
                 

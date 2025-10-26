@@ -215,7 +215,7 @@ class RobotMovementPipeline:
         """Implements the order of operations the robot has to do"""
         # get the starting and ending calf number
         calf_numbers = str(calf_num_msg.data)
-        calf_num_start, calf_num_end = calf_numbers.split('-')
+        calf_num_start, calf_num_end = calf_numbers.split('_')
 
         if calf_num_start == -1:
             task = "base2cow"
