@@ -84,7 +84,7 @@ class RobotMovementPipeline:
 
     def _base2cow(self, cow_pos_end):
         sequence_base2cow = [
-            ("platform", self.home_position)
+            ("platform", self.home_position),
             ("manipulator", INTERMEDIATE_GRASP),
             ("gripper", OPEN),
             ("manipulator", GRASP),
@@ -113,7 +113,7 @@ class RobotMovementPipeline:
             ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", PLACE),
             ("gripper", OPEN),
-            ("manipulator", INTERMEDIATE_PLACE)
+            ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", HOME)
         ]
 
@@ -129,9 +129,10 @@ class RobotMovementPipeline:
             ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", INTERMEDIATE_GRASP),
             ("platform", self.home_position),
-            ("manipulator", GRASP),
+            ("manipulator", INTERMEDIATE_PLACE),
+            ("manipulator", PLACE),
             ("gripper", OPEN),
-            ("manipulator", INTERMEDIATE_GRASP)
+            ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", HOME)
         ]
 
@@ -222,11 +223,21 @@ class RobotMovementPipeline:
             rospy.logerr(f"Error moving gripper to {pose}: {e}")
             return False
 
-    def process(self, calf_num_msg, task):
+    def process(self, calf_num_msg):
         """Implements the order of operations the robot has to do"""
         # get the starting and ending calf number
         calf_numbers = str(calf_num_msg.data)
-        calf_num_start, calf_num_end = calf_numbers.split('-')
+        calf_num_start, calf_num_end = calf_numbers.split('_')
+
+        calf_num_start = int(calf_num_start)
+        calf_num_end = int(calf_num_end)
+
+        if calf_num_start == -1:
+            task = "base2cow"
+        elif calf_num_end == -1:
+            task = "cow2base"
+        else:
+            task = "cow2cow"
 
         calf_position_start = self._get_calf_position(calf_num_start)
         calf_position_end = self._get_calf_position(calf_num_end)

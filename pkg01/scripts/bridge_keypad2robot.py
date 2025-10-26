@@ -90,10 +90,9 @@ class Bridge():
             rospy.loginfo("\033[92m✅ Successfully connected to MQTT broker\033[0m")
             
             # Subscribe to sequence topic (entire sequences) with QoS 2
-            topic = f"{self.topic}/sequence"
-            self.clientMQTT.subscribe(topic, qos=2)
+            self.clientMQTT.subscribe(self.topic, qos=2)
             
-            rospy.loginfo("\033[96m📬 Subscribed to MQTT topic: %s (QoS: 2)\033[0m", topic)
+            rospy.loginfo("\033[96m📬 Subscribed to MQTT topic: %s (QoS: 2)\033[0m", self.topic)
                 
         else:
             rospy.logerr("\033[91m❌ Failed to connect to MQTT broker with code: %s\033[0m", str(rc))
@@ -115,13 +114,16 @@ class Bridge():
         topic = msg.topic
         payload_raw = msg.payload.decode("utf-8")
 
-        if topic == "Platform-Site/cow":
+        rospy.loginfo("\033[96m📨 Received MQTT message on topic: %s\033[0m", topic)
+        # rospy.logdebug("\033[90m   Payload: %s\033[0m", payload_raw[:100] + "..." if len(payload_raw) > 100 else payload_raw)
+
+        if topic == "Pickup-Site/cow":
             self._on_platform_message(payload_raw)
         else:
             self._on_calf_message(topic, payload_raw)
 
     def _on_platform_message(self, payload_raw):
-        if self.platform_sequece is None:
+        if self.platform_sequece is not None:
             rospy.logerr("\033[91mError: platform not free\033[0m")
             return
         
@@ -201,12 +203,12 @@ class Bridge():
                     "total_liters": new_liters
                 }
                 # save the new sequence in the dict
-                self.sequences_dict[cows[0]["cow"]]
+                self.sequences_dict[cows[0]["cow"]] = new_sequence
 
                 # get the ending calf number (-1 if platform)
                 calf_num_end = cows[0]["cow"]
 
-                self.pub_legacy.publish(f"{calf_num_start}-{calf_num_end}")
+                self.pub_legacy.publish(f"{calf_num_start}_{calf_num_end}")
 
                 rospy.loginfo("\033[96m📤 Published: %s → %s\033[0m", calf_num_start, calf_num_end)
                 
@@ -250,6 +252,9 @@ class Bridge():
                 
                 # Mark task as done
                 self.sequence_queue.task_done()
+
+                # if it was a platform task, mark the platform free
+                self.platform_sequece = None
                 
             except Exception as e:
                 rospy.logerr("\033[91m❌ Error processing sequence: %s\033[0m", str(e))
