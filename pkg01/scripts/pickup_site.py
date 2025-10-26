@@ -118,14 +118,14 @@ class pickupSite():
             "total_liters": total_liters
         }
         
-        topic = f'{self.topic}/sequence'
+        # topic = f'{self.topic}'
         self.clientMQTT.publish(
-            topic=topic,
+            topic=self.topic,
             payload=json.dumps(sequence_payload),
             qos=2  # Exactly once delivery
         )
         
-        print(f"📡 Published complete sequence to '{topic}'")
+        print(f"📡 Published complete sequence to '{self.topic}'")
         print("="*60 + "\n")
         
         # Force UI update to show newly blocked cows
