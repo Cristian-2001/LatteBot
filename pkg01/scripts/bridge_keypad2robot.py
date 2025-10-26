@@ -90,10 +90,9 @@ class Bridge():
             rospy.loginfo("\033[92m✅ Successfully connected to MQTT broker\033[0m")
             
             # Subscribe to sequence topic (entire sequences) with QoS 2
-            topic = f"{self.topic}/sequence"
-            self.clientMQTT.subscribe(topic, qos=2)
+            self.clientMQTT.subscribe(self.topic, qos=2)
             
-            rospy.loginfo("\033[96m📬 Subscribed to MQTT topic: %s (QoS: 2)\033[0m", topic)
+            rospy.loginfo("\033[96m📬 Subscribed to MQTT topic: %s (QoS: 2)\033[0m", self.topic)
                 
         else:
             rospy.logerr("\033[91m❌ Failed to connect to MQTT broker with code: %s\033[0m", str(rc))
@@ -114,6 +113,9 @@ class Bridge():
         """
         topic = msg.topic
         payload_raw = msg.payload.decode("utf-8")
+
+        rospy.loginfo("\033[96m📨 Received MQTT message on topic: %s\033[0m", topic)
+        # rospy.logdebug("\033[90m   Payload: %s\033[0m", payload_raw[:100] + "..." if len(payload_raw) > 100 else payload_raw)
 
         if topic == "Platform-Site/cow":
             self._on_platform_message(payload_raw)
