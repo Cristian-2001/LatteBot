@@ -117,7 +117,7 @@ class Bridge():
         rospy.loginfo("\033[96m📨 Received MQTT message on topic: %s\033[0m", topic)
         # rospy.logdebug("\033[90m   Payload: %s\033[0m", payload_raw[:100] + "..." if len(payload_raw) > 100 else payload_raw)
 
-        if topic == "Platform-Site/cow":
+        if topic == "Pickup-Site/cow":
             self._on_platform_message(payload_raw)
         else:
             self._on_calf_message(topic, payload_raw)
