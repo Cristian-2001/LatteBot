@@ -217,6 +217,9 @@ class RobotMovementPipeline:
         calf_numbers = str(calf_num_msg.data)
         calf_num_start, calf_num_end = calf_numbers.split('_')
 
+        calf_num_start = int(calf_num_start)
+        calf_num_end = int(calf_num_end)
+
         if calf_num_start == -1:
             task = "base2cow"
         elif calf_num_end == -1:
