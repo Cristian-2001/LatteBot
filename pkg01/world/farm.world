@@ -34,5 +34,76 @@
 			<uri>model://bucket</uri>
 			<pose>-0.7 0 0 1.5707963267948966 0 1.5707963267948966</pose>
 		</include>
+		
+		
+		<!-- Cow 2 -->
+		<include>
+			<uri>model://cow</uri>
+			<name>cow_2</name>
+			<pose>1 2 0.65 1.5707963267948966 0 -0.785398163397448</pose>
+		</include>
+		
+		<!-- Cow 3 -->
+		<include>
+			<uri>model://cow</uri>
+			<name>cow_3</name>
+			<pose>3 2 0.65 1.5707963267948966 0 -0.785398163397448</pose>
+		</include>
+		
+		<!-- Cow 4 -->
+		<include>
+			<uri>model://cow</uri>
+			<name>cow_4</name>
+			<pose>5 2 0.65 1.5707963267948966 0 -0.785398163397448</pose>
+		</include>
+		
+		<!-- Cow 5 -->
+		<include>
+			<uri>model://cow</uri>
+			<name>cow_5</name>
+			<pose>7 2 0.65 1.5707963267948966 0 -0.785398163397448</pose>
+		</include>
+		
+		<!-- Cow 6 -->
+		<include>
+			<uri>model://cow</uri>
+			<name>cow_6</name>
+			<pose>9 2 0.65 1.5707963267948966 0 -0.785398163397448</pose>
+		</include>
+		
+		<!-- Cow 7 -->
+		<include>
+			<uri>model://cow</uri>
+			<name>cow_7</name>
+			<pose>11 2 0.65 1.5707963267948966 0 -0.785398163397448</pose>
+		</include>
+		
+		<!-- Cow 8 -->
+		<include>
+			<uri>model://cow</uri>
+			<name>cow_8</name>
+			<pose>13 2 0.65 1.5707963267948966 0 -0.785398163397448</pose>
+		</include>
+		
+		<!-- Cow 9 -->
+		<include>
+			<uri>model://cow</uri>
+			<name>cow_9</name>
+			<pose>15 2 0.65 1.5707963267948966 0 -0.785398163397448</pose>
+		</include>
+		
+		<!-- Cow 10 -->
+		<include>
+			<uri>model://cow</uri>
+			<name>cow_10</name>
+			<pose>17 2 0.65 1.5707963267948966 0 -0.785398163397448</pose>
+		</include>
+
+			<!-- Cow 1 -->
+		<include>
+			<uri>model://cow</uri>
+			<name>cow_1</name>
+			<pose>19 2 0.65 1.5707963267948966 0 -0.785398163397448</pose>
+		</include>
 	</world>
 </sdf>

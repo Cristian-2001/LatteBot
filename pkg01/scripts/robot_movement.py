@@ -20,6 +20,19 @@ OPEN = "open"
 CLOSE = "close"
 GRASP_HANDLE = "grasp_handle"  # Intermediate gripper position for bucket handle
 
+positions = {
+    0: 1,
+    1: 3,
+    2: 5,
+    3: 7,
+    4: 9,
+    5: 11,
+    6: 13,
+    7: 15,
+    8: 17,
+    9: 19
+}
+
 class RobotMovementPipeline:
     def __init__(self):
         rospy.init_node('robot_listener', anonymous=True)
@@ -128,9 +141,8 @@ class RobotMovementPipeline:
         """Map calf number to platform position and move."""
         try:
             num = int(calf_num)
-            if 0 <= num <= 10:
-                position = float(num)  # TODO: Map to actual calf positions
-                return position
+            if 0 <= num <= 9:
+                position = positions.get(num, 0)
             elif num == -1:
                 return self.home_position
             else:

@@ -1,0 +1,40 @@
+<sdf version="1.6">
+  <model name="cow">
+    <static>true</static>
+    <self_collide>false</self_collide>
+    <link name="cow_link">
+      <gravity>true</gravity>
+      <self_collide>false</self_collide>
+
+      <!-- Visual: Keep detailed mesh for appearance -->
+      <visual name="cow_visual">
+        <geometry>
+          <mesh>
+            <uri>model://cow/meshes/cow.obj</uri>
+            <scale>2.0 2.0 2.0</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <script>
+            <uri>model://cow/materials/scripts</uri>
+            <uri>model://cow/materials/textures</uri>
+            <name>CowTexture</name>
+          </script>
+        </material>
+      </visual>
+
+      <!-- Inertial properties -->
+      <inertial>
+        <mass>500</mass>
+        <inertia>
+          <ixx>50.0</ixx>
+          <iyy>100.0</iyy>
+          <izz>50.0</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+    </link>
+  </model>
+</sdf>
