@@ -203,7 +203,7 @@ class Bridge():
                     "total_liters": new_liters
                 }
                 # save the new sequence in the dict
-                self.sequences_dict[cows[0]["cow"]]
+                self.sequences_dict[cows[0]["cow"]] = new_sequence
 
                 # get the ending calf number (-1 if platform)
                 calf_num_end = cows[0]["cow"]
