@@ -9,16 +9,22 @@
 
 Adafruit_SSD1306 display(OLED_WIDTH, OLED_HEIGHT);
 
+const int buttonPin = 3;
+const int ledPin = 13;
+
 int dati[5];
 
-size_t DATI = 5, DIGITAL = 1, ANALOG = 4;
+size_t DATI = 5;
 
 int weight = 10;
+int buttonState = 0;
 unsigned long timestamp;
 
 void setup() {
   // put your setup code here, to run once:
-  pinMode(3, INPUT);
+  pinMode(buttonPin, INPUT);
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, HIGH);
 
   timestamp = millis();
   Serial.begin(9600);
@@ -40,33 +46,23 @@ void setup() {
 
   display.display();
 
-  // pinMode(13, OUTPUT);
-
   delay(5000);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
 
-  if (millis() - timestamp > 1000) {
-    dati[0] = analogRead(A0);
-    dati[1] = analogRead(A1);
-    dati[2] = analogRead(A2);
-    dati[3] = analogRead(A3);
-    dati[4] = digitalRead(3);
+  if (millis() - timestamp > 500) {
+    buttonState = digitalRead(buttonPin);
+    if (buttonState == HIGH && weight != 2) {
+      weight = 2;
+      digitalWrite(ledPin, LOW);
+    }
+    else if (buttonState == HIGH) {
+      weight = 10;
+      digitalWrite(ledPin, HIGH);
+    }
 
-    // for (int i = 0; i < ANALOG; i++) {
-    //   //Serial.println(dati[i]);
-    //   if (dati[i] < 256) {
-    //     prods++;
-    //   }
-    // }
-
-    // if(dati[4] == LOW){
-    //   prods++;
-    // }
-
-    //Serial.println(prods);
 
     display.clearDisplay();
     display.setTextSize(2);
@@ -96,7 +92,7 @@ void loop() {
     display.display();
 
     // pacchetto dati
-    // FF topic weight FE
+    // FF calf_num weight FE
     Serial.write(0xFF);
     Serial.write(char(0));
     Serial.write(char(weight));
