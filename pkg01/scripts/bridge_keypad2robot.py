@@ -11,6 +11,9 @@ from paho import mqtt
 import rospy
 from std_msgs.msg import String
 
+Calf_num = int
+Sequence = dict
+
 
 class Bridge():
     def __init__(self):
@@ -24,10 +27,17 @@ class Bridge():
         self.topic = self.config.get("MQTT", "Topic", fallback="Pickup-Site")
         
         # Queue management (moved from pickup_site)
-        self.sequence_queue = Queue()
+        # each element is a starting calf number (-1 if base), sequence
+        self.sequence_queue: Queue[(Calf_num, Sequence)] = Queue()
         self.current_sequence_id = None
         self.is_processing = False
         self.queue_lock = Lock()
+
+        # sequence that is waiting on the platform
+        self.platform_sequece = None
+
+        # dict containing a calf_num and the rest of its sequence (empty dict if ended)
+        self.sequences_dict: dict[Calf_num, Sequence] = {}
         
         # Initialize ROS first
         self._init_rospy()
@@ -43,8 +53,8 @@ class Bridge():
     def _init_rospy(self):
         rospy.init_node('pickup_site_bridge', anonymous=True)
         
-        # Single publisher for cow data
-        self.pub_cow = rospy.Publisher('milking/cow_data', String, queue_size=10)
+        # # Single publisher for cow data
+        # self.pub_cow = rospy.Publisher('milking/cow_data', String, queue_size=10)
         
         # Legacy publisher for backward compatibility
         self.pub_legacy = rospy.Publisher('calf_num', String, queue_size=10)
@@ -80,10 +90,9 @@ class Bridge():
             rospy.loginfo("\033[92m✅ Successfully connected to MQTT broker\033[0m")
             
             # Subscribe to sequence topic (entire sequences) with QoS 2
-            topic = f"{self.topic}/sequence"
-            self.clientMQTT.subscribe(topic, qos=2)
+            self.clientMQTT.subscribe(self.topic, qos=2)
             
-            rospy.loginfo("\033[96m📬 Subscribed to MQTT topic: %s (QoS: 2)\033[0m", topic)
+            rospy.loginfo("\033[96m📬 Subscribed to MQTT topic: %s (QoS: 2)\033[0m", self.topic)
                 
         else:
             rospy.logerr("\033[91m❌ Failed to connect to MQTT broker with code: %s\033[0m", str(rc))
@@ -104,6 +113,19 @@ class Bridge():
         """
         topic = msg.topic
         payload_raw = msg.payload.decode("utf-8")
+
+        rospy.loginfo("\033[96m📨 Received MQTT message on topic: %s\033[0m", topic)
+        # rospy.logdebug("\033[90m   Payload: %s\033[0m", payload_raw[:100] + "..." if len(payload_raw) > 100 else payload_raw)
+
+        if topic == "Pickup-Site/cow":
+            self._on_platform_message(payload_raw)
+        else:
+            self._on_calf_message(topic, payload_raw)
+
+    def _on_platform_message(self, payload_raw):
+        if self.platform_sequece is not None:
+            rospy.logerr("\033[91mError: platform not free\033[0m")
+            return
         
         try:
             # Parse JSON payload (entire sequence)
@@ -117,9 +139,12 @@ class Bridge():
             rospy.loginfo("\033[92m📨 Received sequence: %s (%d cows, %.1fL total)\033[0m",
                          sequence_id, total_cows, total_liters)
             
+            # save sequence as platform_sequence
+            self.platform_sequece = sequence_data
+            
             # Add sequence to processing queue
             with self.queue_lock:
-                self.sequence_queue.put(sequence_data)
+                self.sequence_queue.put((-1, sequence_data))
                 queue_size = self.sequence_queue.qsize()
             
             rospy.loginfo("\033[96m✅ Sequence queued (Queue size: %d)\033[0m", queue_size)
@@ -128,6 +153,16 @@ class Bridge():
             rospy.logerr("\033[91m❌ Failed to parse sequence JSON: %s\033[0m", str(e))
         except Exception as e:
             rospy.logerr("\033[91m❌ Error handling message: %s\033[0m", str(e))
+
+    def _on_calf_message(self, topic, payload_raw):
+        calf_num = topic
+        next_calf_sequence = self.sequences_dict[calf_num]
+        with self.queue_lock:
+            self.sequence_queue.put((calf_num, next_calf_sequence))
+            queue_size = self.sequence_queue.qsize()
+        
+        rospy.loginfo("\033[96m✅ Sequence queued (Queue size: %d)\033[0m", queue_size)
+            
     
     def _process_queue(self):
         """
@@ -140,7 +175,7 @@ class Bridge():
             try:
                 # Wait for a sequence from the queue (blocking with timeout)
                 try:
-                    sequence_data = self.sequence_queue.get(timeout=1.0)
+                    calf_num_start, sequence_data = self.sequence_queue.get(timeout=1.0)
                 except:
                     continue  # Timeout, check again
                 
@@ -158,36 +193,54 @@ class Bridge():
                 rospy.loginfo("\033[92m🚀 Processing sequence: %s\033[0m", sequence_id)
                 rospy.loginfo("\033[92m� %d cows - %.1fL total\033[0m", total_cows, total_liters)
                 rospy.loginfo("\033[96m" + "="*70 + "\033[0m")
+
+                # create the new sequence
+                new_liters = total_liters - cows[0]["liters"]
+                new_sequence = {
+                    "sequence_id": sequence_id,
+                    "cows": cows[1:],
+                    "total_cows": len(cows)-1,
+                    "total_liters": new_liters
+                }
+                # save the new sequence in the dict
+                self.sequences_dict[cows[0]["cow"]] = new_sequence
+
+                # get the ending calf number (-1 if platform)
+                calf_num_end = cows[0]["cow"]
+
+                self.pub_legacy.publish(f"{calf_num_start}_{calf_num_end}")
+
+                rospy.loginfo("\033[96m📤 Published: %s → %s\033[0m", calf_num_start, calf_num_end)
                 
-                # Process each cow in the sequence
-                for idx, cow_data in enumerate(cows, 1):
-                    cow_num = cow_data.get("cow")
-                    milk_liters = cow_data.get("liters")
+                # # Process each cow in the sequence
+                # for idx, cow_data in enumerate(cows, 1):
+                #     cow_num = cow_data.get("cow")
+                #     milk_liters = cow_data.get("liters")
                     
-                    rospy.loginfo("\033[92m[%d/%d] Cow %s → %.1fL\033[0m",
-                                 idx, total_cows, cow_num, milk_liters)
+                #     rospy.loginfo("\033[92m[%d/%d] Cow %s → %.1fL\033[0m",
+                #                  idx, total_cows, cow_num, milk_liters)
                     
-                    # Create payload for ROS
-                    payload = {
-                        "cow_number": cow_num,
-                        "milk_liters": milk_liters,
-                        "sequence_id": sequence_id,
-                        "step": idx,
-                        "total_steps": total_cows
-                    }
+                #     # Create payload for ROS
+                #     payload = {
+                #         "cow_number": cow_num,
+                #         "milk_liters": milk_liters,
+                #         "sequence_id": sequence_id,
+                #         "step": idx,
+                #         "total_steps": total_cows
+                #     }
                     
-                    payload_json = json.dumps(payload)
+                #     payload_json = json.dumps(payload)
                     
-                    # Publish to ROS cow data topic
-                    self.pub_cow.publish(payload_json)
+                #     # Publish to ROS cow data topic
+                #     self.pub_cow.publish(payload_json)
                     
-                    # Publish to legacy topic (just cow number)
-                    self.pub_legacy.publish(str(cow_num))
+                #     # Publish to legacy topic (just cow number)
+                #     self.pub_legacy.publish(str(cow_num))
                     
-                    rospy.loginfo("\033[90m   → Published to ROS topics\033[0m")
+                #     rospy.loginfo("\033[90m   → Published to ROS topics\033[0m")
                     
-                    # Optional: Add delay between cows if needed
-                    # rospy.sleep(0.5)
+                #     # Optional: Add delay between cows if needed
+                #     # rospy.sleep(0.5)
                 
                 rospy.loginfo("\033[96m" + "="*70 + "\033[0m")
                 rospy.loginfo("\033[92m✅ Sequence %s completed\033[0m", sequence_id)
@@ -199,6 +252,9 @@ class Bridge():
                 
                 # Mark task as done
                 self.sequence_queue.task_done()
+
+                # if it was a platform task, mark the platform free
+                self.platform_sequece = None
                 
             except Exception as e:
                 rospy.logerr("\033[91m❌ Error processing sequence: %s\033[0m", str(e))

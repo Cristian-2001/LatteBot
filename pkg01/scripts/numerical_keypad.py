@@ -6,16 +6,15 @@ class CowMilkInterface:
         self.root = root
         self.root.title("Milking Sequence Planner")
         
-        # Set window size to fit all content without scrolling
-        # Width: 900px, Height: 950px (adjusted to show everything)
-        self.root.geometry("900x950")
-        
-        # Center window on screen
+        # Set window size to 50% of screen dimensions
         self.root.update_idletasks()
-        width = 900
-        height = 950
-        x = (self.root.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.root.winfo_screenheight() // 2) - (height // 2)
+        screen_width = root.winfo_screenwidth()
+        screen_height = root.winfo_screenheight()
+
+        width = int(screen_width * 0.4)
+        height = int(screen_height * 1)
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
         self.root.geometry(f'{width}x{height}+{x}+{y}')
         
         self.root.configure(bg='#667eea')
@@ -26,9 +25,29 @@ class CowMilkInterface:
         self.sequence_callback = sequence_callback  # Callback per sequenza completa
         self.used_cows_getter = used_cows_getter  # Function to get globally used cows
         
-        # Create main container
-        self.container = tk.Frame(root, bg='white', padx=40, pady=40)
+        # Create canvas with scrollbar for scrollable content
+        self.canvas = tk.Canvas(root, bg='white', highlightthickness=0)
+        self.scrollbar = tk.Scrollbar(root, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = tk.Frame(self.canvas, bg='white')
+        
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
+        
+        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        
+        # Pack canvas and scrollbar
+        self.scrollbar.pack(side="right", fill="y")
+        self.canvas.pack(side="left", fill="both", expand=True)
+        
+        # Create main container inside scrollable frame
+        self.container = tk.Frame(self.scrollable_frame, bg='white', padx=40, pady=40)
         self.container.pack(expand=True, fill='both', padx=20, pady=20)
+        
+        # Bind mousewheel scrolling
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
         
         # ===== COW SELECTION SECTION =====
         cow_frame = tk.Frame(self.container, bg='white')
@@ -264,9 +283,9 @@ class CowMilkInterface:
         )
         clear_all_btn.pack(side='left', padx=5, pady=5, fill='x', expand=True)
         
-        # ===== BIG START BUTTON AT BOTTOM (outside container, directly in root) =====
-        start_frame = tk.Frame(self.root, bg='white')
-        start_frame.pack(side='bottom', fill='x', padx=0, pady=0)
+        # ===== BIG START BUTTON AT BOTTOM (inside container, still scrollable) =====
+        start_frame = tk.Frame(self.container, bg='white')
+        start_frame.pack(side='bottom', fill='x', padx=0, pady=(20, 0))
         
         # Start sequence button (BIG and PROMINENT at bottom)
         self.start_btn = tk.Button(
@@ -287,6 +306,10 @@ class CowMilkInterface:
         
         # Bind keyboard events
         self.root.bind('<Key>', self.on_key_press)
+    
+    def _on_mousewheel(self, event):
+        """Handle mousewheel scrolling"""
+        self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         
     def add_digit(self, digit):
         # Prevent multiple decimal points

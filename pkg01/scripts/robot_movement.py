@@ -68,6 +68,62 @@ class RobotMovementPipeline:
                 rate.sleep()
         
         rospy.loginfo("Robot listener node started, waiting for calf numbers...")
+
+    def _base2cow(self, cow_pos_end):
+        sequence_base2cow = [
+            ("platform", self.home_position),
+            ("manipulator", INTERMEDIATE_GRASP),
+            ("gripper", OPEN),
+            ("manipulator", GRASP),
+            ("gripper", CLOSE),
+            ("manipulator", INTERMEDIATE_GRASP),
+            ("platform", cow_pos_end),
+            ("manipulator", INTERMEDIATE_PLACE),
+            ("manipulator", PLACE),
+            ("gripper", OPEN),
+            ("manipulator", INTERMEDIATE_PLACE),
+            ("manipulator", HOME)
+        ]
+
+        return sequence_base2cow
+    
+    def _cow2cow(self, cow_pos_start, cow_pos_end):
+        sequence_cow2cow = [
+            ("platform", cow_pos_start),
+            ("manipulator", INTERMEDIATE_PLACE),
+            ("gripper", OPEN),
+            ("manipulator", PLACE),
+            ("gripper", CLOSE),
+            ("manipulator", INTERMEDIATE_PLACE),
+            ("manipulator", INTERMEDIATE_GRASP),
+            ("platform", cow_pos_end),
+            ("manipulator", INTERMEDIATE_PLACE),
+            ("manipulator", PLACE),
+            ("gripper", OPEN),
+            ("manipulator", INTERMEDIATE_PLACE),
+            ("manipulator", HOME)
+        ]
+
+        return sequence_cow2cow
+    
+    def _cow2base(self, cow_pos_start):
+        sequence_cow2base = [
+            ("platform", cow_pos_start),
+            ("gripper", OPEN),
+            ("manipulator", INTERMEDIATE_PLACE),
+            ("manipulator", PLACE),
+            ("gripper", CLOSE),
+            ("manipulator", INTERMEDIATE_PLACE),
+            ("manipulator", INTERMEDIATE_GRASP),
+            ("platform", self.home_position),
+            ("manipulator", INTERMEDIATE_PLACE),
+            ("manipulator", PLACE),
+            ("gripper", OPEN),
+            ("manipulator", INTERMEDIATE_PLACE),
+            ("manipulator", HOME)
+        ]
+
+        return sequence_cow2base
     
     def _get_calf_position(self, calf_num: str):
         """Map calf number to platform position and move."""
@@ -76,6 +132,8 @@ class RobotMovementPipeline:
             if 0 <= num <= 10:
                 position = float(num)  # TODO: Map to actual calf positions
                 return position
+            elif num == -1:
+                return self.home_position
             else:
                 rospy.logwarn("Cow number out of range (0-10). Returning home")
                 return -1
@@ -155,46 +213,38 @@ class RobotMovementPipeline:
 
     def process(self, calf_num_msg):
         """Implements the order of operations the robot has to do"""
-        # get the calf_number
-        calf_num = str(calf_num_msg.data)
+        # get the starting and ending calf number
+        calf_numbers = str(calf_num_msg.data)
+        calf_num_start, calf_num_end = calf_numbers.split('_')
 
-        calf_position = self._get_calf_position(calf_num)
-        if calf_position == -1:
-            # invalid position, returns -1
-            print(f"Invalid calf position: {calf_position}")
-            return
+        calf_num_start = int(calf_num_start)
+        calf_num_end = int(calf_num_end)
 
-        # check if the platform is in home position, otherwise move it there
-        if abs(self.platform_position - self.home_position) > 0.01:  # 1cm tolerance
-            rospy.loginfo(f"Platform not at home ({self.platform_position:.3f}m), moving to home...")
-            self._go_home()
-            # Wait for platform to reach home
-            rate = rospy.Rate(10)
-            timeout = rospy.Duration(30)
-            start_time = rospy.Time.now()
-            while not rospy.is_shutdown():
-                if abs(self.platform_position - 0.0) < 0.01:
-                    rospy.loginfo("Platform returned to home position")
-                    break
-                if rospy.Time.now() - start_time > timeout:
-                    rospy.logerr("Platform home movement timeout")
-                    return
-                rate.sleep()
+        if calf_num_start == -1:
+            task = "base2cow"
+        elif calf_num_end == -1:
+            task = "cow2base"
+        else:
+            task = "cow2cow"
+
+        calf_position_start = self._get_calf_position(calf_num_start)
+        calf_position_end = self._get_calf_position(calf_num_end)
+        for pos in [calf_position_start, calf_position_end]:
+            if pos == -1:
+                # invalid position, returns -1
+                print(f"Invalid calf position: {pos}")
+                return
 
         # Execute movement sequence
-        sequence = [
-            ("manipulator", INTERMEDIATE_GRASP),
-            ("gripper", OPEN),
-            ("manipulator", GRASP),
-            ("gripper", CLOSE),  # Use handle-specific position (0.55 rad) instead of full close
-            ("manipulator", INTERMEDIATE_GRASP),
-            ("platform", calf_position),
-            ("manipulator", INTERMEDIATE_PLACE),
-            ("manipulator", PLACE),
-            ("gripper", OPEN),
-            ("manipulator", INTERMEDIATE_PLACE),
-            ("manipulator", HOME)
-        ]
+        if task == "base2cow":
+            sequence = self._base2cow(calf_position_end)
+        elif task == "cow2cow":
+            sequence = self._cow2cow(calf_position_start, calf_position_end)
+        elif task == "cow2base":
+            sequence = self._cow2base(calf_position_start)
+        else:
+            print("ERROR: wrong task")
+            return -1
         
         for action_type, target in sequence:
             rospy.loginfo(f"Executing {action_type} to {target}")

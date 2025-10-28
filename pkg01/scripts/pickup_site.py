@@ -100,25 +100,32 @@ class pickupSite():
         for idx, (cow_num, liters) in enumerate(sequence, 1):
             print(f"   {idx}. Cow {cow_num} → {liters} liters")
         
+        # Add dummy entry to indicate return to base
+        print(f"   {len(sequence) + 1}. Return to base (cow_id = -1)")
+        
         # Publish entire sequence to MQTT as a single message
         # Bridge will handle queue processing
+        # Always append a dummy entry with cow=-1 to indicate return to base
+        cows_list = [{"cow": cow, "liters": float(liters)} for cow, liters in sequence]
+        cows_list.append({"cow": -1, "liters": 0.0})  # Dummy entry for base return
+        
         sequence_payload = {
             "sequence_id": full_sequence_id,
             "sequence_number": sequence_number,
             "timestamp": timestamp.isoformat(),
-            "cows": [{"cow": cow, "liters": float(liters)} for cow, liters in sequence],
-            "total_cows": len(sequence),
+            "cows": cows_list,
+            "total_cows": len(sequence),  # Keep original count (without dummy entry)
             "total_liters": total_liters
         }
         
-        topic = f'{self.topic}/sequence'
+        # topic = f'{self.topic}'
         self.clientMQTT.publish(
-            topic=topic,
+            topic=self.topic,
             payload=json.dumps(sequence_payload),
             qos=2  # Exactly once delivery
         )
         
-        print(f"📡 Published complete sequence to '{topic}'")
+        print(f"📡 Published complete sequence to '{self.topic}'")
         print("="*60 + "\n")
         
         # Force UI update to show newly blocked cows
