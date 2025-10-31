@@ -5,6 +5,7 @@ import time
 import rospy
 from std_msgs.msg import String
 from sensor_msgs.msg import JointState
+from gazebo_msgs.srv import DeleteModel
 import moveit_commander
 
 from move_platform import move_platform
@@ -43,6 +44,11 @@ class RobotMovementPipeline:
         self.scene = moveit_commander.PlanningSceneInterface()
         self.move_group = moveit_commander.MoveGroupCommander("manipulator")
         self.gripper_group = moveit_commander.MoveGroupCommander("gripper")
+        
+        # Initialize Gazebo delete model service
+        rospy.wait_for_service('/gazebo/delete_model')
+        self.delete_model_service = rospy.ServiceProxy('/gazebo/delete_model', DeleteModel)
+        rospy.loginfo("Gazebo delete_model service ready")
         
         # Store current joint states
         self.current_joint_states = None
@@ -144,6 +150,7 @@ class RobotMovementPipeline:
             num = int(calf_num)
             if 0 <= num <= 9:
                 position = positions.get(num, 0)
+                return position
             elif num == -1:
                 return self.home_position
             else:
@@ -155,6 +162,21 @@ class RobotMovementPipeline:
         
     def _go_home(self):
         move_platform(self.home_position)
+    
+    def _delete_bucket_after_delay(self, delay_seconds=5.0):
+        """Delete the bucket model from Gazebo after a specified delay."""
+        rospy.loginfo(f"Scheduling bucket deletion in {delay_seconds} seconds...")
+        time.sleep(delay_seconds)
+        
+        try:
+            rospy.loginfo("Deleting bucket from Gazebo...")
+            response = self.delete_model_service('bucket')
+            if response.success:
+                rospy.loginfo("✅ Bucket successfully deleted from simulation")
+            else:
+                rospy.logwarn(f"⚠️ Failed to delete bucket: {response.status_message}")
+        except rospy.ServiceException as e:
+            rospy.logerr(f"❌ Service call failed: {e}")
 
     def _joint_state_callback(self, msg):
         """Store the latest joint states."""
@@ -294,6 +316,11 @@ class RobotMovementPipeline:
             time.sleep(1)  # brief pause between actions
 
         print("Movement sequence completed successfully. Ready for next command.")
+        
+        # If this was a cow2base task (bucket placed at cow 0 position), schedule deletion
+        if task == "cow2base":
+            rospy.loginfo("🗑️  Bucket placed - scheduling automatic deletion...")
+            self._delete_bucket_after_delay(delay_seconds=5.0)
     
     def run(self):
         """Keep the node running."""
