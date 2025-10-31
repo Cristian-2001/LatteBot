@@ -174,12 +174,7 @@ class Bridge():
         #         self.starting_weights[index] = 12
         #         self.starting_time[self.topic_publish] = time.time()
         
-        print("TIME:", time.time() - self.starting_time[calf_num])
-        if weight == 0:
-            del self.calf_limits[calf_num]
-            del self.starting_weights[calf_num]
-            del self.starting_time[calf_num]
-            return
+        print("TIME:", time.time() - self.starting_time[calf_num])  
         if weight <= self.starting_weights[calf_num] - self.calf_limits[calf_num]:
             val = 1
         elif time.time() - self.starting_time[calf_num] > 90:
@@ -189,6 +184,11 @@ class Bridge():
             # TODO: serve il retain?
             # val can be 0 if reached time-out, 1 if the calf finished to drink
             self.clientMQTT.publish(topic=f'{self.topic_publish}', payload=val, retain=True)
+            val = None
+            del self.calf_limits[calf_num]
+            del self.starting_weights[calf_num]
+            del self.starting_time[calf_num]
+            return
 
 
 if __name__ == '__main__':

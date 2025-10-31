@@ -120,7 +120,7 @@ class Bridge():
         rospy.loginfo("\033[96m📨 Received MQTT message on topic: %s\033[0m", topic)
         # rospy.logdebug("\033[90m   Payload: %s\033[0m", payload_raw[:100] + "..." if len(payload_raw) > 100 else payload_raw)
 
-        if topic == "Pickup-Site/cow":
+        if topic == "Pickup-Site":
             self._on_platform_message(payload_raw)
         else:
             self._on_calf_message(topic, payload_raw)
@@ -159,7 +159,19 @@ class Bridge():
 
     def _on_calf_message(self, topic, payload_raw):
         calf_num = topic.split('/')[-1]
+        
+        # Check if sequence exists for this calf
+        if str(calf_num) not in self.sequences_dict:
+            rospy.logwarn("\033[93m⚠️  No sequence found for calf %s - ignoring message\033[0m", calf_num)
+            return
+        
         next_calf_sequence = self.sequences_dict[str(calf_num)]
+        
+        # Check if sequence is empty (already completed)
+        if not next_calf_sequence.get("cows", []):
+            rospy.loginfo("\033[96mℹ️  Sequence for calf %s already completed - ignoring message\033[0m", calf_num)
+            return
+        
         with self.queue_lock:
             self.sequence_queue.put((calf_num, next_calf_sequence))
             queue_size = self.sequence_queue.qsize()
@@ -176,7 +188,7 @@ class Bridge():
         
         while not rospy.is_shutdown():
             queue_size = self.sequence_queue.qsize()
-            rospy.loginfo("\033[95m🔍 Checking queue (size: %d)...\033[0m", queue_size)
+            #rospy.loginfo("\033[95m🔍 Checking queue (size: %d)...\033[0m", queue_size)
             try:
                 # Wait for a sequence from the queue (blocking with timeout)
                 try:
