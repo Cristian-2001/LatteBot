@@ -91,11 +91,12 @@ class Bridge():
             
             # Subscribe to sequence topic (entire sequences) with QoS 2
             self.clientMQTT.subscribe(self.topic, qos=2)
-            rospy.loginfo("\033[96m📬 Subscribed to MQTT topic: %s (QoS: 2)\033[0m", self.topic)
-
-            for i in range(10):
-                self.clientMQTT.subscribe(f"cow/{i}", qos=2)
-                rospy.loginfo("\033[96m📬 Subscribed to MQTT topic: cow/%d (QoS: 2)\033[0m", i)
+            
+            # Subscribe to all cow topics (wildcard subscription) with QoS 2
+            self.clientMQTT.subscribe("cow/#", qos=2)
+            
+            rospy.loginfo("\033[96m📬 Subscribed to MQTT topics: %s, cow/# (QoS: 2)\033[0m", self.topic)
+                
         else:
             rospy.logerr("\033[91m❌ Failed to connect to MQTT broker with code: %s\033[0m", str(rc))
 
