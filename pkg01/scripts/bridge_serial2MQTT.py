@@ -9,6 +9,9 @@ import json
 import serial.tools.list_ports
 
 
+DEBUG = True
+
+
 class Bridge():
 
     def __init__(self):
@@ -159,6 +162,13 @@ class Bridge():
         # if it is the first time it receives a weight from this calf, save it
         if self.topic_publish not in self.starting_weights:
             self.starting_weights[self.topic_publish] = weight
+
+        # DEBUG: create fake weights, only for simulation purposes
+        if DEBUG:
+            for index in range(0, 10):
+                if index == self.topic_publish:
+                    continue
+                self.starting_weights[index] = 12
         
         if weight == 0:
             del self.calf_limits[self.topic_publish]

@@ -16,7 +16,7 @@ int dati[5];
 
 size_t DATI = 5;
 
-int weight = 10;
+int weight = 12;
 int buttonState = 0;
 unsigned long timestamp;
 
