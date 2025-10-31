@@ -150,20 +150,21 @@ class Bridge():
         if self.inbuffer[0] != b'\xff':
             return False
 
-        self.topic_publish = int.from_bytes(self.inbuffer[1], byteorder='little')
+        calf_num = int.from_bytes(self.inbuffer[1], byteorder='little')
+        self.topic_publish = f"cow/{calf_num}"
 
         weight = int.from_bytes(self.inbuffer[2], byteorder='little')
         print(weight)
 
         print(self.topic_publish, self.calf_limits)
-        if self.topic_publish not in self.calf_limits:
+        if calf_num not in self.calf_limits:
             return
 
         # if it is the first time it receives a weight from this calf, save it
         # save also the time it receives the message
-        if self.topic_publish not in self.starting_weights:
-            self.starting_weights[self.topic_publish] = weight
-            self.starting_time[self.topic_publish] = time.time()
+        if calf_num not in self.starting_weights:
+            self.starting_weights[calf_num] = weight
+            self.starting_time[calf_num] = time.time()
 
         # DEBUG: create fake weights, only for simulation purposes
         # if DEBUG:
@@ -173,15 +174,15 @@ class Bridge():
         #         self.starting_weights[index] = 12
         #         self.starting_time[self.topic_publish] = time.time()
         
-        print("TIME:", time.time() - self.starting_time[self.topic_publish])
+        print("TIME:", time.time() - self.starting_time[calf_num])
         if weight == 0:
-            del self.calf_limits[self.topic_publish]
-            del self.starting_weights[self.topic_publish]
-            del self.starting_time[self.topic_publish]
+            del self.calf_limits[calf_num]
+            del self.starting_weights[calf_num]
+            del self.starting_time[calf_num]
             return
-        if weight <= self.starting_weights[self.topic_publish] - self.calf_limits[self.topic_publish]:
+        if weight <= self.starting_weights[calf_num] - self.calf_limits[calf_num]:
             val = 1
-        elif time.time() - self.starting_time[self.topic_publish] > 90:
+        elif time.time() - self.starting_time[calf_num] > 90:
             val = 0
 
         if val is not None:

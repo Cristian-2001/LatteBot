@@ -156,8 +156,8 @@ class Bridge():
             rospy.logerr("\033[91m❌ Error handling message: %s\033[0m", str(e))
 
     def _on_calf_message(self, topic, payload_raw):
-        calf_num = topic
-        next_calf_sequence = self.sequences_dict[calf_num]
+        calf_num = topic.split('/')[-1]
+        next_calf_sequence = self.sequences_dict[str(calf_num)]
         with self.queue_lock:
             self.sequence_queue.put((calf_num, next_calf_sequence))
             queue_size = self.sequence_queue.qsize()
@@ -206,7 +206,7 @@ class Bridge():
                     "total_liters": new_liters
                 }
                 # save the new sequence in the dict
-                self.sequences_dict[cows[0]["cow"]] = new_sequence
+                self.sequences_dict[str(cows[0]["cow"])] = new_sequence
 
                 # get the ending calf number (-1 if platform)
                 calf_num_end = cows[0]["cow"]
