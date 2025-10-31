@@ -172,6 +172,8 @@ class Bridge():
         rospy.loginfo("\033[96m🔄 Queue processor thread started\033[0m")
         
         while not rospy.is_shutdown():
+            queue_size = self.sequence_queue.qsize()
+            rospy.loginfo("\033[95m🔍 Checking queue (size: %d)...\033[0m", queue_size)
             try:
                 # Wait for a sequence from the queue (blocking with timeout)
                 try:

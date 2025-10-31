@@ -173,6 +173,7 @@ class Bridge():
         #         self.starting_weights[index] = 12
         #         self.starting_time[self.topic_publish] = time.time()
         
+        print("TIME:", time.time() - self.starting_time[self.topic_publish])
         if weight == 0:
             del self.calf_limits[self.topic_publish]
             del self.starting_weights[self.topic_publish]
