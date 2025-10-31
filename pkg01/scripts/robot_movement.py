@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 import sys
 import time
+import select
+import termios
+import tty
 
 import rospy
 from std_msgs.msg import String
 from sensor_msgs.msg import JointState
-from gazebo_msgs.srv import DeleteModel
+from gazebo_msgs.srv import DeleteModel, SpawnModel
+from geometry_msgs.msg import Pose, Point, Quaternion
 import moveit_commander
 
 from move_platform import move_platform
@@ -49,6 +53,17 @@ class RobotMovementPipeline:
         rospy.wait_for_service('/gazebo/delete_model')
         self.delete_model_service = rospy.ServiceProxy('/gazebo/delete_model', DeleteModel)
         rospy.loginfo("Gazebo delete_model service ready")
+        
+        # Initialize Gazebo spawn model service
+        rospy.wait_for_service('/gazebo/spawn_sdf_model')
+        self.spawn_model_service = rospy.ServiceProxy('/gazebo/spawn_sdf_model', SpawnModel)
+        rospy.loginfo("Gazebo spawn_model service ready")
+        
+        # Store bucket model path
+        import rospkg
+        rospack = rospkg.RosPack()
+        pkg_path = rospack.get_path('pkg01')
+        self.bucket_model_path = pkg_path + '/models/bucket/model.sdf'
         
         # Store current joint states
         self.current_joint_states = None
@@ -177,6 +192,50 @@ class RobotMovementPipeline:
                 rospy.logwarn(f"⚠️ Failed to delete bucket: {response.status_message}")
         except rospy.ServiceException as e:
             rospy.logerr(f"❌ Service call failed: {e}")
+    
+    def _spawn_bucket(self):
+        """Spawn a new bucket at the initial position."""
+        try:
+            # Read the bucket model SDF file
+            with open(self.bucket_model_path, 'r') as f:
+                bucket_sdf = f.read()
+            
+            # Define bucket pose (initial position from farm.world)
+            # <pose>-0.7 0 0 1.5707963267948966 0 1.5707963267948966</pose>
+            bucket_pose = Pose()
+            bucket_pose.position = Point(x=-0.7, y=0.0, z=0.0)
+            
+            # Quaternion for rotation (roll=90°, pitch=0°, yaw=90°)
+            # Using the rotation from the world file
+            import tf.transformations as tf_trans
+            quaternion = tf_trans.quaternion_from_euler(1.5707963267948966, 0, 1.5707963267948966)
+            bucket_pose.orientation = Quaternion(
+                x=quaternion[0],
+                y=quaternion[1],
+                z=quaternion[2],
+                w=quaternion[3]
+            )
+            
+            rospy.loginfo("🪣 Spawning new bucket at initial position...")
+            response = self.spawn_model_service(
+                model_name='bucket',
+                model_xml=bucket_sdf,
+                robot_namespace='',
+                initial_pose=bucket_pose,
+                reference_frame='world'
+            )
+            
+            if response.success:
+                rospy.loginfo("✅ Bucket successfully spawned!")
+            else:
+                rospy.logwarn(f"⚠️ Failed to spawn bucket: {response.status_message}")
+                
+        except FileNotFoundError:
+            rospy.logerr(f"❌ Bucket model file not found: {self.bucket_model_path}")
+        except rospy.ServiceException as e:
+            rospy.logerr(f"❌ Service call failed: {e}")
+        except Exception as e:
+            rospy.logerr(f"❌ Error spawning bucket: {e}")
 
     def _joint_state_callback(self, msg):
         """Store the latest joint states."""
@@ -322,8 +381,40 @@ class RobotMovementPipeline:
             rospy.loginfo("🗑️  Bucket placed - scheduling automatic deletion...")
             self._delete_bucket_after_delay(delay_seconds=5.0)
     
+    def _keyboard_listener(self):
+        """Listen for keyboard input in a separate thread."""
+        rospy.loginfo("🎹 Keyboard listener started. Press 'a' to spawn bucket, 'q' to quit")
+        
+        # Save terminal settings
+        old_settings = termios.tcgetattr(sys.stdin)
+        
+        try:
+            tty.setcbreak(sys.stdin.fileno())
+            
+            while not rospy.is_shutdown():
+                if select.select([sys.stdin], [], [], 0.1)[0]:
+                    key = sys.stdin.read(1)
+                    
+                    if key.lower() == 'a':
+                        rospy.loginfo("🪣 'a' pressed - spawning bucket...")
+                        self._spawn_bucket()
+                    # elif key.lower() == 'q':
+                    #     rospy.loginfo("👋 'q' pressed - shutting down...")
+                    #     rospy.signal_shutdown("User requested shutdown")
+                    #     break
+                        
+        finally:
+            # Restore terminal settings
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+    
     def run(self):
-        """Keep the node running."""
+        """Keep the node running with keyboard listener."""
+        import threading
+        
+        # Start keyboard listener in separate thread
+        keyboard_thread = threading.Thread(target=self._keyboard_listener, daemon=True)
+        keyboard_thread.start()
+        
         rospy.spin()
 
 if __name__ == '__main__':
