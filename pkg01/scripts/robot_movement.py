@@ -65,6 +65,9 @@ class RobotMovementPipeline:
         pkg_path = rospack.get_path('pkg01')
         self.bucket_model_path = pkg_path + '/models/bucket/model.sdf'
         
+        # Counter for spawning multiple buckets
+        self.bucket_counter = 0
+        
         # Store current joint states
         self.current_joint_states = None
         self.home_position = 0.0
@@ -109,12 +112,16 @@ class RobotMovementPipeline:
             ("manipulator", INTERMEDIATE_GRASP),
             ("gripper", OPEN),
             ("manipulator", GRASP),
+            ("wait", 3.0),  # Increased wait for gripper to stabilize around bucket handle
             ("gripper", CLOSE),
+            ("wait", 4.0),  # Increased wait for grasp plugin to activate (40 update cycles)
             ("manipulator", INTERMEDIATE_GRASP),
             ("platform", cow_pos_end),
             ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", PLACE),
+            ("wait", 2.0),  # Wait before releasing
             ("gripper", OPEN),
+            ("wait", 2.0),  # Wait for release
             ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", HOME)
         ]
@@ -127,13 +134,17 @@ class RobotMovementPipeline:
             ("manipulator", INTERMEDIATE_PLACE),
             ("gripper", OPEN),
             ("manipulator", PLACE),
+            ("wait", 3.0),  # Increased wait for gripper to stabilize
             ("gripper", CLOSE),
+            ("wait", 4.0),  # Increased wait for grasp plugin (40 update cycles)
             ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", INTERMEDIATE_GRASP),
             ("platform", cow_pos_end),
             ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", PLACE),
+            ("wait", 2.0),  # Wait before releasing
             ("gripper", OPEN),
+            ("wait", 2.0),  # Wait for release
             ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", HOME)
         ]
@@ -146,13 +157,17 @@ class RobotMovementPipeline:
             ("gripper", OPEN),
             ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", PLACE),
+            ("wait", 2.0),  # Wait for gripper to stabilize
             ("gripper", CLOSE),
+            ("wait", 2.0),  # Wait for grasp plugin
             ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", INTERMEDIATE_GRASP),
             ("platform", self.home_position),
             ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", PLACE),
+            ("wait", 1.0),  # Wait before releasing
             ("gripper", OPEN),
+            ("wait", 1.0),  # Wait for release
             ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", HOME)
         ]
@@ -200,6 +215,10 @@ class RobotMovementPipeline:
             with open(self.bucket_model_path, 'r') as f:
                 bucket_sdf = f.read()
             
+            # Increment counter for unique bucket name
+            self.bucket_counter += 1
+            bucket_name = f'bucket_{self.bucket_counter}'
+            
             # Define bucket pose (initial position from farm.world)
             # <pose>-0.7 0 0 1.5707963267948966 0 1.5707963267948966</pose>
             bucket_pose = Pose()
@@ -216,9 +235,9 @@ class RobotMovementPipeline:
                 w=quaternion[3]
             )
             
-            rospy.loginfo("🪣 Spawning new bucket at initial position...")
+            rospy.loginfo(f"🪣 Spawning new bucket '{bucket_name}' at initial position...")
             response = self.spawn_model_service(
-                model_name='bucket',
+                model_name=bucket_name,  # Use unique name
                 model_xml=bucket_sdf,
                 robot_namespace='',
                 initial_pose=bucket_pose,
@@ -226,9 +245,9 @@ class RobotMovementPipeline:
             )
             
             if response.success:
-                rospy.loginfo("✅ Bucket successfully spawned!")
+                rospy.loginfo(f"✅ Bucket '{bucket_name}' successfully spawned!")
             else:
-                rospy.logwarn(f"⚠️ Failed to spawn bucket: {response.status_message}")
+                rospy.logwarn(f"⚠️ Failed to spawn bucket '{bucket_name}': {response.status_message}")
                 
         except FileNotFoundError:
             rospy.logerr(f"❌ Bucket model file not found: {self.bucket_model_path}")
@@ -253,11 +272,26 @@ class RobotMovementPipeline:
         try:
             rospy.loginfo(f"Moving manipulator to {pose} position...")
             
+            # Set reasonable tolerances
+            self.move_group.set_goal_position_tolerance(0.01)
+            self.move_group.set_goal_joint_tolerance(0.01)
+            self.move_group.set_planning_time(10.0)
+            
             # Use the 'pose' named target defined in SRDF
             self.move_group.set_named_target(pose)
             
-            # Plan and execute
-            plan = self.move_group.go(wait=True)
+            # Plan first to check if path is valid
+            plan = self.move_group.plan()
+            
+            # Check if planning succeeded
+            if isinstance(plan, tuple):
+                success, trajectory, planning_time, error_code = plan
+                if not success:
+                    rospy.logwarn(f"Failed to plan manipulator movement to {pose} - error code: {error_code}")
+                    return False
+            
+            # Execute
+            success = self.move_group.go(wait=True)
             
             # Stop any residual movement
             self.move_group.stop()
@@ -265,15 +299,17 @@ class RobotMovementPipeline:
             # Clear targets
             self.move_group.clear_pose_targets()
             
-            if plan:
-                rospy.loginfo(f"Manipulator successfully moved to {pose} position")
+            if success:
+                rospy.loginfo(f"✅ Manipulator successfully moved to {pose} position")
                 return True
             else:
-                rospy.logwarn(f"Failed to plan path to {pose} position")
+                rospy.logwarn(f"⚠️ Failed to execute manipulator movement to {pose}")
                 return False
                 
         except Exception as e:
-            rospy.logerr(f"Error moving manipulator to {pose}: {e}")
+            rospy.logerr(f"❌ Error moving manipulator to {pose}: {e}")
+            import traceback
+            rospy.logerr(traceback.format_exc())
             return False
         
     def _move_gripper(self, pose: str) -> bool:
@@ -281,11 +317,30 @@ class RobotMovementPipeline:
         try:
             rospy.loginfo(f"Moving gripper to {pose} position...")
             
+            # Set increased tolerances for gripper
+            self.gripper_group.set_goal_position_tolerance(0.01)  # 1cm tolerance
+            self.gripper_group.set_goal_joint_tolerance(0.05)     # More relaxed joint tolerance
+            self.gripper_group.set_planning_time(10.0)            # More time to plan
+            
+            # Slow down gripper movement for better contact detection
+            self.gripper_group.set_max_velocity_scaling_factor(0.3)  # 30% of max speed
+            self.gripper_group.set_max_acceleration_scaling_factor(0.3)  # 30% of max accel
+            
             # Use the 'pose' named target defined in SRDF
             self.gripper_group.set_named_target(pose)
             
-            # Plan and execute
-            plan = self.gripper_group.go(wait=True)
+            # Plan first to check if path is valid
+            plan = self.gripper_group.plan()
+            
+            # Check if planning succeeded (plan is a tuple in newer MoveIt versions)
+            if isinstance(plan, tuple):
+                success, trajectory, planning_time, error_code = plan
+                if not success:
+                    rospy.logwarn(f"Failed to plan gripper movement to {pose} - error code: {error_code}")
+                    return False
+            
+            # Execute the plan
+            success = self.gripper_group.go(wait=True)
             
             # Stop any residual movement
             self.gripper_group.stop()
@@ -293,15 +348,19 @@ class RobotMovementPipeline:
             # Clear targets
             self.gripper_group.clear_pose_targets()
             
-            if plan:
-                rospy.loginfo(f"Gripper successfully moved to {pose} position")
+            if success:
+                rospy.loginfo(f"✅ Gripper successfully moved to {pose} position")
+                # Add delay to ensure gripper settles and contacts stabilize
+                time.sleep(1.0)
                 return True
             else:
-                rospy.logwarn(f"Failed to plan path to {pose} position")
+                rospy.logwarn(f"⚠️ Failed to execute gripper movement to {pose}")
                 return False
                 
         except Exception as e:
-            rospy.logerr(f"Error moving gripper to {pose}: {e}")
+            rospy.logerr(f"❌ Error moving gripper to {pose}: {e}")
+            import traceback
+            rospy.logerr(traceback.format_exc())
             return False
 
     def process(self, calf_num_msg):
