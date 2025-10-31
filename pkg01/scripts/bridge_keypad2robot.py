@@ -91,6 +91,7 @@ class Bridge():
             
             # Subscribe to sequence topic (entire sequences) with QoS 2
             self.clientMQTT.subscribe(self.topic, qos=2)
+            self.clientMQTT.subscribe("cow/#", qos=2)
             
             rospy.loginfo("\033[96m📬 Subscribed to MQTT topic: %s (QoS: 2)\033[0m", self.topic)
                 

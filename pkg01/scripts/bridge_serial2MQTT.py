@@ -181,7 +181,7 @@ class Bridge():
             return
         if weight <= self.starting_weights[self.topic_publish] - self.calf_limits[self.topic_publish]:
             val = 1
-        elif time.time() - self.starting_time[self.topic_publish] > 60:
+        elif time.time() - self.starting_time[self.topic_publish] > 90:
             val = 0
 
         if val is not None:
