@@ -9,13 +9,13 @@ import json
 import serial.tools.list_ports
 
 
-DEBUG = True
+# DEBUG = True
 
 
 class Bridge():
 
     def __init__(self):
-        self.starting_time = time.time()
+        self.starting_time = {}     # dict of calf_num: time at which a bucket has arrived
 
         self.config = configparser.ConfigParser()
 
@@ -160,23 +160,27 @@ class Bridge():
             return
 
         # if it is the first time it receives a weight from this calf, save it
+        # save also the time it receives the message
         if self.topic_publish not in self.starting_weights:
             self.starting_weights[self.topic_publish] = weight
+            self.starting_time[self.topic_publish] = time.time()
 
         # DEBUG: create fake weights, only for simulation purposes
-        if DEBUG:
-            for index in range(0, 10):
-                if index == self.topic_publish:
-                    continue
-                self.starting_weights[index] = 12
+        # if DEBUG:
+        #     for index in range(0, 10):
+        #         if index == self.topic_publish:
+        #             continue
+        #         self.starting_weights[index] = 12
+        #         self.starting_time[self.topic_publish] = time.time()
         
         if weight == 0:
             del self.calf_limits[self.topic_publish]
             del self.starting_weights[self.topic_publish]
+            del self.starting_time[self.topic_publish]
             return
         if weight <= self.starting_weights[self.topic_publish] - self.calf_limits[self.topic_publish]:
             val = 1
-        elif time.time() - self.starting_time > 20:
+        elif time.time() - self.starting_time[self.topic_publish] > 60:
             val = 0
 
         if val is not None:

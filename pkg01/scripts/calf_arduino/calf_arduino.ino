@@ -59,7 +59,7 @@ void loop() {
       digitalWrite(ledPin, LOW);
     }
     else if (buttonState == HIGH) {
-      weight = 10;
+      weight = 12;
       digitalWrite(ledPin, HIGH);
     }
 
