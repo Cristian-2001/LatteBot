@@ -27,6 +27,7 @@ class Bridge():
         self.setupMQTT()
 
         self.calf_limits = {}
+        self.starting_weights = {}
 
     def setupSerial(self):
         """
@@ -104,12 +105,14 @@ class Bridge():
 
         try:
             data = json.loads(msg.payload.decode())
-            calf_id = data.get('cow_number')
-            limit = data.get('milk_liters')
+            cow_numbers = data.get('cows')
+            for cow_data in cow_numbers[:-1]:
+                calf_id = cow_data['cow']
+                limit = cow_data['liters']
             
-            if calf_id is not None and limit is not None:
-                self.calf_limits[calf_id] = limit
-                print(f"Updated limits for calf {calf_id}: {limit}")
+                if calf_id is not None and limit is not None:
+                    self.calf_limits[calf_id] = limit
+                    print(f"Updated limits for calf {calf_id}: {limit}")
         except Exception as e:
             print(f"Error parsing message: {e}")
 
@@ -146,24 +149,29 @@ class Bridge():
 
         self.topic_publish = int.from_bytes(self.inbuffer[1], byteorder='little')
 
-        # print(numval)
         weight = int.from_bytes(self.inbuffer[2], byteorder='little')
-        print(weight)  # can be 0 if reached time-out, 1 if the calf finished to drink
+        print(weight)
 
         print(self.topic_publish, self.calf_limits)
         if self.topic_publish not in self.calf_limits:
             return
+
+        # if it is the first time it receives a weight from this calf, save it
+        if self.topic_publish not in self.starting_weights:
+            self.starting_weights[self.topic_publish] = weight
         
         if weight == 0:
             del self.calf_limits[self.topic_publish]
+            del self.starting_weights[self.topic_publish]
             return
-        if weight <= self.calf_limits[self.topic_publish]:
+        if weight <= self.starting_weights[self.topic_publish] - self.calf_limits[self.topic_publish]:
             val = 1
-        elif time.time() - self.starting_time > 5:
+        elif time.time() - self.starting_time > 20:
             val = 0
 
         if val is not None:
             # TODO: serve il retain?
+            # val can be 0 if reached time-out, 1 if the calf finished to drink
             self.clientMQTT.publish(topic=f'{self.topic_publish}', payload=val, retain=True)
 
 
