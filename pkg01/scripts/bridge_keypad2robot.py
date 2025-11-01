@@ -228,37 +228,7 @@ class Bridge():
                 self.pub_legacy.publish(f"{calf_num_start}_{calf_num_end}")
 
                 rospy.loginfo("Published: %s -> %s", calf_num_start, calf_num_end)
-                
-                # # Process each cow in the sequence
-                # for idx, cow_data in enumerate(cows, 1):
-                #     cow_num = cow_data.get("cow")
-                #     milk_liters = cow_data.get("liters")
-                    
-                #     rospy.loginfo("\033[92m[%d/%d] Cow %s → %.1fL\033[0m",
-                #                  idx, total_cows, cow_num, milk_liters)
-                    
-                #     # Create payload for ROS
-                #     payload = {
-                #         "cow_number": cow_num,
-                #         "milk_liters": milk_liters,
-                #         "sequence_id": sequence_id,
-                #         "step": idx,
-                #         "total_steps": total_cows
-                #     }
-                    
-                #     payload_json = json.dumps(payload)
-                    
-                #     # Publish to ROS cow data topic
-                #     self.pub_cow.publish(payload_json)
-                    
-                #     # Publish to legacy topic (just cow number)
-                #     self.pub_legacy.publish(str(cow_num))
-                    
-                #     rospy.loginfo("\033[90m   → Published to ROS topics\033[0m")
-                    
-                #     # Optional: Add delay between cows if needed
-                #     # rospy.sleep(0.5)
-                
+    
                 rospy.loginfo("="*70)
                 rospy.loginfo("Sequence %s completed", sequence_id)
                 rospy.loginfo("="*70 + "\n")

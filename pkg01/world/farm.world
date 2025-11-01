@@ -99,7 +99,7 @@
 			<pose>17 2 0.65 1.5707963267948966 0 -0.785398163397448</pose>
 		</include>
 
-			<!-- Cow 1 -->
+		<!-- Cow 1 -->
 		<include>
 			<uri>model://cow</uri>
 			<name>cow_1</name>
