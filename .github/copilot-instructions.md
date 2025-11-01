@@ -1,9 +1,16 @@
 # Copilot Instructions for UR10e Mobile Manipulation System
 
 ## Project Overview
-This is a **ROS (Robot Operating System) Catkin workspace** for simulating a **Universal Robots UR10e manipulator with Robotiq 2F-140 gripper mounted on a 10-meter linear mobile platform** in Gazebo. The system combines mobile manipulation with MoveIt motion planning for extended workspace operations.
+This is a **hybrid ROS + MQTT system** for automated dairy farm operations. The system simulates a **Universal Robots UR10e manipulator with Robotiq 2F-140 gripper mounted on a 10-meter linear mobile platform** in Gazebo, controlled via MQTT messaging from Windows-based operator interfaces.
 
-**Workspace Root**: Variable (user-specific). Common paths: `/home/aldo/Desktop/smerd/lattebot_ws`, `/home/vboxuser/lattebot_ws2`
+**Architecture**: Multi-platform distributed system
+- **Linux/WSL**: ROS Catkin workspace for robot simulation (Gazebo + MoveIt)
+- **Windows**: Python MQTT bridges and operator UI (Tkinter keypad interface)
+- **Communication**: HiveMQ Cloud broker (TLS, QoS 2) bridges MQTT ↔ ROS topics
+
+**Workspace Roots**:
+- Linux: `/home/aldo/Desktop/smerd/lattebot_ws`, `/home/vboxuser/lattebot_ws2`
+- Windows: `C:\Users\cicci\Documents\Universita\Magistrale\Smart_Robotics\lattebot`
 
 **Primary Packages**: 
 - `pkg01` - Robot model, platform, controllers, simulation, and custom objects
@@ -124,6 +131,103 @@ world_platform (fixed ground reference, MUST have inertial properties)
 
 **Common error**: Launching only Gazebo + RViz without MoveIt = no interactive motion planning available
 
+## MQTT/ROS Communication Architecture
+
+### System Components
+The system uses a **3-tier distributed architecture** for dairy farm automation:
+
+1. **Operator Interface** (`pickup_site.py` on Windows)
+   - Tkinter GUI (`numerical_keypad.py`) for planning cow milking sequences
+   - User selects cow number (0-9) and milk quantity (liters)
+   - Publishes complete sequences to MQTT topic `Pickup-Site` (configurable in `config/config.ini`)
+   - Tracks globally used cows to prevent duplicate assignments
+   - Generates unique sequence IDs: `SEQ0001_20251025_143022_a3b4c5d6`
+
+2. **MQTT ↔ ROS Bridge** (`bridge_keypad2robot.py` on Linux/WSL)
+   - Subscribes to MQTT topics: `Pickup-Site` (sequences), `cow/#` (individual cow notifications)
+   - Queue-based processor: Thread-safe sequence execution with lock management
+   - Publishes to ROS topic: `/calf_num` (format: `{start_calf}_{end_calf}`, e.g., `-1_3` or `5_7`)
+   - Special values: `-1` = platform/base position, `0-9` = cow stall numbers
+   - Maintains `sequences_dict` to track partial sequences per cow
+
+3. **Robot Controller** (`robot_movement.py` on Linux/WSL)
+   - Subscribes to ROS topic: `/calf_num`
+   - Decodes tasks: `base2cow` (-1→N), `cow2cow` (N→M), `cow2base` (N→-1)
+   - Maps cow numbers to platform positions: `{0:1m, 1:3m, 2:5m, ..., 9:19m}`
+   - Orchestrates: Platform motion → MoveIt arm planning → Gazebo gripper control
+   - Spawns/deletes bucket models dynamically in Gazebo simulation
+
+### Data Flow Pattern
+```
+[Operator GUI] --MQTT(QoS 2)--> [HiveMQ Cloud] --MQTT--> [Bridge] --ROS--> [Robot Controller] --MoveIt/Gazebo--> [Simulation]
+     ↓                                                        ↓
+[Sequence Planning]                                   [Queue Management]
+{cow: 3, liters: 5.2}                                {-1 → 3 → 5 → -1}
+```
+
+### MQTT Topics Convention
+- **Publish** (pickup_site → bridge):
+  - `Pickup-Site`: JSON sequence payload with metadata
+    ```json
+    {
+      "sequence_id": "SEQ0001_20251025_143022_a3b4c5d6",
+      "cows": [{"cow": 3, "liters": 5.2}, {"cow": 5, "liters": 4.8}, {"cow": -1, "liters": 0.0}],
+      "total_cows": 2,
+      "total_liters": 10.0
+    }
+    ```
+- **Subscribe** (bridge):
+  - `Pickup-Site`: Main sequence topic (configurable)
+  - `cow/#`: Wildcard for individual cow notifications (e.g., `cow/3`, `cow/5`)
+
+### Configuration Management
+All MQTT/serial settings in `pkg01/config/config.ini`:
+```ini
+[MQTT]
+Username = cristiancasali
+Password = Cristian01
+Broker = d5b931520be34f4c9de0a77be2fac4e3.s1.eu.hivemq.cloud
+Port = 8883
+Topic = Pickup-Site
+
+[Serial]
+PortName = COM5
+UseDescription = no
+```
+**CRITICAL**: Scripts use relative paths (`../config/config.ini`) - works from `scripts/` directory
+
+### Windows Development Environment
+- **Python Virtual Environment**: `.venv` at workspace root (activate: `.venv\Scripts\Activate.ps1`)
+- **Dependencies**: `requirements.txt` includes `paho-mqtt`, `pyserial`, ROS Python packages
+- **Shell**: PowerShell - use `;` for command chaining, not `&&`
+- **Running bridges**: 
+  ```powershell
+  # Terminal 1: Operator interface
+  & .venv/Scripts/python.exe pkg01/scripts/pickup_site.py
+  
+  # Terminal 2: Serial bridge (Arduino weight sensors)
+  & .venv/Scripts/python.exe pkg01/scripts/bridge_serial2MQTT.py
+  
+  # Terminal 3: MQTT→ROS bridge (Linux/WSL with ROS sourced)
+  python3 pkg01/scripts/bridge_keypad2robot.py
+  ```
+
+### Arduino Integration (`bridge_serial2MQTT.py`)
+- **Purpose**: Monitors milk bucket weight via Arduino load cells
+- **Serial Protocol**: Custom binary protocol (header `\xff`, calf_num, weight bytes)
+- **MQTT Publishing**: Publishes to `cow/{calf_num}` when cow finishes drinking
+  - Trigger: Weight drops below `starting_weight - limit` OR 20-second timeout
+  - Subscribes to `Pickup-Site` to get milk limits per cow
+- **Auto-detection**: Finds Arduino by COM port description (configurable)
+
+### Bridge State Management
+**Queue Pattern** (`bridge_keypad2robot.py`):
+- Thread-safe queue (`Queue[(Calf_num, Sequence)]`) with `Lock` for concurrency
+- `platform_sequence`: Currently active sequence on platform (None if free)
+- `sequences_dict`: Maps calf numbers to remaining sequence steps
+- `is_processing`: Prevents concurrent sequence execution
+- **CRITICAL**: Mark platform free (`platform_sequence = None`) after task completion
+
 ## Developer Workflows
 
 ### Build & Source
@@ -166,6 +270,52 @@ roslaunch pkg01 gazebo_ur10e.launch paused:=true
 ```bash
 roslaunch pkg01 ur10e.launch  # Uses joint_state_publisher_gui
 ```
+
+### Windows: Running MQTT Bridges
+```powershell
+# Ensure virtual environment is activated
+.venv\Scripts\Activate.ps1
+
+# Start operator interface (Tkinter GUI)
+& .venv\Scripts\python.exe pkg01\scripts\pickup_site.py
+
+# Start serial→MQTT bridge (Arduino weight monitoring)
+& .venv\Scripts\python.exe pkg01\scripts\bridge_serial2MQTT.py
+```
+
+### Linux/WSL: Running MQTT→ROS Bridge
+```bash
+# Source ROS workspace first
+source devel/setup.bash
+
+# Start bridge (subscribes to MQTT, publishes to ROS)
+python3 src/pkg01/scripts/bridge_keypad2robot.py
+
+# Start robot controller (executes movements)
+python3 src/pkg01/scripts/robot_movement.py
+```
+
+### Complete System Startup (Multi-Platform)
+1. **Linux/WSL Terminal 1**: Launch Gazebo simulation
+   ```bash
+   roslaunch pkg01 gazebo_farm.launch
+   ```
+2. **Linux/WSL Terminal 2**: Start MQTT→ROS bridge
+   ```bash
+   python3 src/pkg01/scripts/bridge_keypad2robot.py
+   ```
+3. **Linux/WSL Terminal 3**: Start robot controller
+   ```bash
+   python3 src/pkg01/scripts/robot_movement.py
+   ```
+4. **Windows Terminal 1**: Start operator interface
+   ```powershell
+   & .venv\Scripts\python.exe pkg01\scripts\pickup_site.py
+   ```
+5. **Windows Terminal 2** (optional): Start Arduino bridge
+   ```powershell
+   & .venv\Scripts\python.exe pkg01\scripts\bridge_serial2MQTT.py
+   ```
 
 ### Control Platform Motion
 ```bash
@@ -211,6 +361,38 @@ rostopic pub -1 /ur10e_robot/gripper_controller/command trajectory_msgs/JointTra
 }"
 ```
 **Expected**: Mimic joints follow `finger_joint` automatically, smooth opening/closing motion
+
+### Debugging MQTT Communication
+```bash
+# Check bridge connection status (look for "Successfully connected")
+# In bridge_keypad2robot.py output
+
+# Monitor ROS topic receiving MQTT data
+rostopic echo /calf_num
+
+# Test MQTT publishing (requires mosquitto-clients)
+mosquitto_pub -h d5b931520be34f4c9de0a77be2fac4e3.s1.eu.hivemq.cloud \
+  -p 8883 -u cristiancasali -P Cristian01 --capath /etc/ssl/certs/ \
+  -t "Pickup-Site" -m '{"sequence_id":"TEST","cows":[{"cow":3,"liters":5.0}],"total_cows":1,"total_liters":5.0}'
+
+# Check bridge subscriptions (should show Pickup-Site and cow/# topics)
+# Look for "📬 Subscribed to MQTT topics" in bridge output
+```
+
+### Debugging Windows Python Environment
+```powershell
+# Check virtual environment packages
+& .venv\Scripts\pip.exe list | Select-String "paho-mqtt|pyserial|rospy"
+
+# Test MQTT connection from Windows
+& .venv\Scripts\python.exe -c "import paho.mqtt.client as mqtt; print('MQTT OK')"
+
+# Check config.ini loading
+& .venv\Scripts\python.exe -c "import configparser; c=configparser.ConfigParser(); c.read('pkg01/config/config.ini'); print(c.get('MQTT','Broker'))"
+
+# List COM ports (for Arduino detection)
+& .venv\Scripts\python.exe -c "import serial.tools.list_ports; [print(p.device, '-', p.description) for p in serial.tools.list_ports.comports()]"
+```
 
 ### Gazebo Model Refresh (Critical for Development)
 **Problem**: Changes to `.sdf`, `.world`, or `.xacro` files don't appear after relaunch.  
