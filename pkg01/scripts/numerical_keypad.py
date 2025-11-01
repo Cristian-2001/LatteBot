@@ -20,9 +20,9 @@ class CowMilkInterface:
         self.root.configure(bg='#667eea')
         
         self.current_input = ""
-        self.sequence = []  # Lista di tuple (cow_number, milk_quantity)
-        self.callback = callback  # Callback per singola aggiunta
-        self.sequence_callback = sequence_callback  # Callback per sequenza completa
+        self.sequence = []  # List of tuples (cow_number, milk_quantity)
+        self.callback = callback  # Callback for single addition
+        self.sequence_callback = sequence_callback  # Callback for complete sequence
         self.used_cows_getter = used_cows_getter  # Function to get globally used cows
         
         # Create canvas with scrollbar for scrollable content
@@ -290,7 +290,7 @@ class CowMilkInterface:
         # Start sequence button (BIG and PROMINENT at bottom)
         self.start_btn = tk.Button(
             start_frame,
-            text='▶ START SEQUENCE',
+            text='START SEQUENCE',
             font=('Arial', 18, 'bold'),
             bg='#00c853',
             fg='white',
@@ -328,9 +328,9 @@ class CowMilkInterface:
     
     def add_to_sequence(self):
         """Add current cow and milk quantity to the sequence"""
-        # Get selected cow number (extract number from "Cow X" or "Cow X ✓")
+        # Get selected cow number (extract number from "Cow X" or "Cow X [+]")
         cow_text = self.cow_var.get()
-        cow_selection = int(cow_text.split()[1])  # Extract number from "Cow X" or "Cow X ✓"
+        cow_selection = int(cow_text.split()[1])  # Extract number from "Cow X" or "Cow X [+]"
         
         # Get milk quantity
         milk_quantity = self.current_input if self.current_input else "0"
@@ -383,7 +383,7 @@ class CowMilkInterface:
                 messagebox.showerror(
                     "Cow Already Processed",
                     f"Cow {cow_selection} was already processed in a previous sequence!\n\n"
-                    f"❌ You cannot reuse cows that have been started in previous sequences.\n\n"
+                    f"You cannot reuse cows that have been started in previous sequences.\n\n"
                     f"Globally used cows: {sorted(globally_used_cows)}"
                 )
                 return
@@ -409,7 +409,7 @@ class CowMilkInterface:
         self.update_display()
         
         # Show confirmation
-        print(f"✓ Added: Cow {cow_selection} - {milk_quantity} liters")
+        print(f"Added: Cow {cow_selection} - {milk_quantity} liters")
         
         # Update available cows in dropdown (optional: highlight used cows)
         self.update_cow_dropdown_colors()
@@ -448,10 +448,10 @@ class CowMilkInterface:
         for i in range(10):
             if i in globally_used:
                 # Cow was used in previous sequences (cannot be selected)
-                new_values.append(f"Cow {i} ❌")
+                new_values.append(f"Cow {i} [X]")
             elif i in used_in_sequence:
                 # Cow is in current sequence
-                new_values.append(f"Cow {i} ✓")
+                new_values.append(f"Cow {i} [+]")
             else:
                 # Cow is available
                 new_values.append(f"Cow {i}")
@@ -472,7 +472,7 @@ class CowMilkInterface:
             removed = self.sequence.pop(idx)
             self.update_sequence_display()
             self.update_cow_dropdown_colors()
-            print(f"✗ Removed: Cow {removed[0]} - {removed[1]} liters")
+            print(f"Removed: Cow {removed[0]} - {removed[1]} liters")
         else:
             messagebox.showinfo("No Selection", "Select an item from the list to remove")
     
@@ -487,7 +487,7 @@ class CowMilkInterface:
                 self.sequence.clear()
                 self.update_sequence_display()
                 self.update_cow_dropdown_colors()
-                print("✗ Sequence completely cleared")
+                print("Sequence completely cleared")
         else:
             messagebox.showinfo("Empty Sequence", "There are no items to clear")
     
@@ -506,7 +506,7 @@ class CowMilkInterface:
         
         if response:
             print("\n" + "="*50)
-            print("🚀 STARTING MILKING SEQUENCE")
+            print("STARTING MILKING SEQUENCE")
             print("="*50)
             
             # Call sequence callback with complete sequence
@@ -515,7 +515,7 @@ class CowMilkInterface:
             
             # Print sequence details
             for idx, (cow_num, liters) in enumerate(self.sequence, 1):
-                print(f"  {idx}. Cow {cow_num} → {liters} liters")
+                print(f"  {idx}. Cow {cow_num} -> {liters} liters")
             
             print("="*50 + "\n")
             
@@ -560,33 +560,33 @@ class CowMilkInterface:
         """
         if self.sequence:
             cow, liters = self.sequence[-1]
-            return f"Mucca {cow}: {liters} litri"
+            return f"Cow {cow}: {liters} liters"
         return None
     
     def get_all_inputs(self):
         """
         Legacy method - returns all sequence items as formatted strings.
         """
-        return [f"Mucca {cow}: {liters} litri" for cow, liters in self.sequence]
+        return [f"Cow {cow}: {liters} liters" for cow, liters in self.sequence]
 
 
 def main():
     # Define what happens when user adds a single cow
     def on_cow_added(cow_number, milk_quantity):
-        print(f"➕ Aggiunto - Mucca: {cow_number}, Litri: {milk_quantity}")
+        print(f"Added - Cow: {cow_number}, Liters: {milk_quantity}")
     
     # Define what happens when user starts the complete sequence
     def on_sequence_start(sequence):
-        print("\n🤖 ROBOT RICEVE SEQUENZA:")
+        print("\nROBOT RECEIVES SEQUENCE:")
         print("-" * 40)
         for idx, (cow_num, liters) in enumerate(sequence, 1):
-            print(f"  Passo {idx}: Mungere Mucca {cow_num} → {liters} litri")
+            print(f"  Step {idx}: Milk Cow {cow_num} -> {liters} liters")
         print("-" * 40)
-        print(f"Totale operazioni: {len(sequence)}")
+        print(f"Total operations: {len(sequence)}")
         print()
         
-        # Qui puoi aggiungere la logica per inviare la sequenza al robot ROS
-        # Esempio:
+        # Here you can add logic to send sequence to ROS robot
+        # Example:
         # robot_controller.execute_milking_sequence(sequence)
     
     root = tk.Tk()

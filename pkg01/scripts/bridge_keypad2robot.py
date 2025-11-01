@@ -48,7 +48,7 @@ class Bridge():
         # Start queue processor thread
         self.processor_thread = Thread(target=self._process_queue, daemon=True)
         self.processor_thread.start()
-        rospy.loginfo("\033[96m🔄 Queue processor thread started\033[0m")
+        rospy.loginfo("Queue processor thread started")
 
     def _init_rospy(self):
         rospy.init_node('pickup_site_bridge', anonymous=True)
@@ -61,9 +61,9 @@ class Bridge():
         
         self.rate = rospy.Rate(10)  # 10hz
         
-        rospy.loginfo("\033[96m📡 ROS publishers initialized:\033[0m")
-        rospy.loginfo("\033[96m   - milking/cow_data (JSON)\033[0m")
-        rospy.loginfo("\033[96m   - calf_num (legacy)\033[0m")
+        rospy.loginfo("ROS publishers initialized:")
+        rospy.loginfo("   - milking/cow_data (JSON)")
+        rospy.loginfo("   - calf_num (legacy)")
 
     def _setupMQTT(self):
         self.clientMQTT = paho.Client(client_id="", userdata=None, protocol=paho.MQTTv5)
@@ -76,7 +76,7 @@ class Bridge():
         self.clientMQTT.on_subscribe = self._on_subscribe
         self.clientMQTT.on_disconnect = self._on_disconnect
 
-        rospy.loginfo("\033[96m🔌 Connecting to MQTT broker...\033[0m")
+        rospy.loginfo("Connecting to MQTT broker...")
         self.clientMQTT.connect(
             self.config.get("MQTT", "Broker"),
             self.config.getint("MQTT", "Port", fallback=8883),
@@ -85,9 +85,9 @@ class Bridge():
         self.clientMQTT.loop_start()
 
     def _on_connect(self, client, userdata, flags, rc, properties=None):
-        rospy.loginfo("\033[96mConnected with result code %s\033[0m", str(rc))
+        rospy.loginfo("Connected with result code %s", str(rc))
         if rc == 0:
-            rospy.loginfo("\033[92m✅ Successfully connected to MQTT broker\033[0m")
+            rospy.loginfo("Successfully connected to MQTT broker")
             
             # Subscribe to sequence topic (entire sequences) with QoS 2
             self.clientMQTT.subscribe(self.topic, qos=2)
@@ -95,19 +95,19 @@ class Bridge():
             # Subscribe to all cow topics (wildcard subscription) with QoS 2
             self.clientMQTT.subscribe("cow/#", qos=2)
             
-            rospy.loginfo("\033[96m📬 Subscribed to MQTT topics: %s, cow/# (QoS: 2)\033[0m", self.topic)
+            rospy.loginfo("Subscribed to MQTT topics: %s, cow/# (QoS: 2)", self.topic)
                 
         else:
-            rospy.logerr("\033[91m❌ Failed to connect to MQTT broker with code: %s\033[0m", str(rc))
+            rospy.logerr("Failed to connect to MQTT broker with code: %s", str(rc))
 
     def _on_subscribe(self, client, userdata, mid, granted_qos, properties=None):
-        rospy.loginfo("\033[96m✅ Subscription confirmed with QoS: %s\033[0m", str(granted_qos))
+        rospy.loginfo("Subscription confirmed with QoS: %s", str(granted_qos))
 
     def _on_disconnect(self, client, userdata, rc):
         if rc != 0:
-            rospy.logwarn("\033[93m⚠️  Unexpected MQTT disconnection. Will auto-reconnect. Code: %s\033[0m", str(rc))
+            rospy.logwarn("Unexpected MQTT disconnection. Will auto-reconnect. Code: %s", str(rc))
         else:
-            rospy.loginfo("\033[96m👋 Disconnected from MQTT broker\033[0m")
+            rospy.loginfo("Disconnected from MQTT broker")
 
     def _on_message(self, client, userdata, msg):
         """
@@ -117,8 +117,8 @@ class Bridge():
         topic = msg.topic
         payload_raw = msg.payload.decode("utf-8")
 
-        rospy.loginfo("\033[96m📨 Received MQTT message on topic: %s\033[0m", topic)
-        # rospy.logdebug("\033[90m   Payload: %s\033[0m", payload_raw[:100] + "..." if len(payload_raw) > 100 else payload_raw)
+        rospy.loginfo("Received MQTT message on topic: %s", topic)
+        # rospy.logdebug("   Payload: %s", payload_raw[:100] + "..." if len(payload_raw) > 100 else payload_raw)
 
         if topic == "Pickup-Site":
             self._on_platform_message(payload_raw)
@@ -127,7 +127,7 @@ class Bridge():
 
     def _on_platform_message(self, payload_raw):
         if self.platform_sequece is not None:
-            rospy.logerr("\033[91mError: platform not free\033[0m")
+            rospy.logerr("Error: platform not free")
             return
         
         try:
@@ -139,7 +139,7 @@ class Bridge():
             total_liters = sequence_data.get("total_liters", 0.0)
             cows = sequence_data.get("cows", [])
             
-            rospy.loginfo("\033[92m📨 Received sequence: %s (%d cows, %.1fL total)\033[0m",
+            rospy.loginfo("Received sequence: %s (%d cows, %.1fL total)",
                          sequence_id, total_cows, total_liters)
             
             # save sequence as platform_sequence
@@ -150,33 +150,33 @@ class Bridge():
                 self.sequence_queue.put((-1, sequence_data))
                 queue_size = self.sequence_queue.qsize()
             
-            rospy.loginfo("\033[96m✅ Sequence queued (Queue size: %d)\033[0m", queue_size)
+            rospy.loginfo("Sequence queued (Queue size: %d)", queue_size)
             
         except json.JSONDecodeError as e:
-            rospy.logerr("\033[91m❌ Failed to parse sequence JSON: %s\033[0m", str(e))
+            rospy.logerr("Failed to parse sequence JSON: %s", str(e))
         except Exception as e:
-            rospy.logerr("\033[91m❌ Error handling message: %s\033[0m", str(e))
+            rospy.logerr("Error handling message: %s", str(e))
 
     def _on_calf_message(self, topic, payload_raw):
         calf_num = topic.split('/')[-1]
         
         # Check if sequence exists for this calf
         if str(calf_num) not in self.sequences_dict:
-            rospy.logwarn("\033[93m⚠️  No sequence found for calf %s - ignoring message\033[0m", calf_num)
+            rospy.logwarn("No sequence found for calf %s - ignoring message", calf_num)
             return
         
         next_calf_sequence = self.sequences_dict[str(calf_num)]
         
         # Check if sequence is empty (already completed)
         if not next_calf_sequence.get("cows", []):
-            rospy.loginfo("\033[96mℹ️  Sequence for calf %s already completed - ignoring message\033[0m", calf_num)
+            rospy.loginfo("Sequence for calf %s already completed - ignoring message", calf_num)
             return
         
         with self.queue_lock:
             self.sequence_queue.put((calf_num, next_calf_sequence))
             queue_size = self.sequence_queue.qsize()
         
-        rospy.loginfo("\033[96m✅ Sequence queued (Queue size: %d)\033[0m", queue_size)
+        rospy.loginfo("Sequence queued (Queue size: %d)", queue_size)
             
     
     def _process_queue(self):
@@ -184,11 +184,11 @@ class Bridge():
         Background thread that processes sequences from the queue.
         Publishes individual cow messages to ROS topics in order.
         """
-        rospy.loginfo("\033[96m🔄 Queue processor thread started\033[0m")
+        rospy.loginfo("Queue processor thread started")
         
         while not rospy.is_shutdown():
             queue_size = self.sequence_queue.qsize()
-            #rospy.loginfo("\033[95m🔍 Checking queue (size: %d)...\033[0m", queue_size)
+            #rospy.loginfo("Checking queue (size: %d)...", queue_size)
             try:
                 # Wait for a sequence from the queue (blocking with timeout)
                 try:
@@ -206,10 +206,10 @@ class Bridge():
                     self.is_processing = True
                     self.current_sequence_id = sequence_id
                 
-                rospy.loginfo("\033[96m" + "="*70 + "\033[0m")
-                rospy.loginfo("\033[92m🚀 Processing sequence: %s\033[0m", sequence_id)
-                rospy.loginfo("\033[92m� %d cows - %.1fL total\033[0m", total_cows, total_liters)
-                rospy.loginfo("\033[96m" + "="*70 + "\033[0m")
+                rospy.loginfo("="*70)
+                rospy.loginfo("Processing sequence: %s", sequence_id)
+                rospy.loginfo("%d cows - %.1fL total", total_cows, total_liters)
+                rospy.loginfo("="*70)
 
                 # create the new sequence
                 new_liters = total_liters - cows[0]["liters"]
@@ -227,7 +227,7 @@ class Bridge():
 
                 self.pub_legacy.publish(f"{calf_num_start}_{calf_num_end}")
 
-                rospy.loginfo("\033[96m📤 Published: %s → %s\033[0m", calf_num_start, calf_num_end)
+                rospy.loginfo("Published: %s -> %s", calf_num_start, calf_num_end)
                 
                 # # Process each cow in the sequence
                 # for idx, cow_data in enumerate(cows, 1):
@@ -259,9 +259,9 @@ class Bridge():
                 #     # Optional: Add delay between cows if needed
                 #     # rospy.sleep(0.5)
                 
-                rospy.loginfo("\033[96m" + "="*70 + "\033[0m")
-                rospy.loginfo("\033[92m✅ Sequence %s completed\033[0m", sequence_id)
-                rospy.loginfo("\033[96m" + "="*70 + "\033[0m\n")
+                rospy.loginfo("="*70)
+                rospy.loginfo("Sequence %s completed", sequence_id)
+                rospy.loginfo("="*70 + "\n")
                 
                 with self.queue_lock:
                     self.is_processing = False
@@ -274,7 +274,7 @@ class Bridge():
                 self.platform_sequece = None
                 
             except Exception as e:
-                rospy.logerr("\033[91m❌ Error processing sequence: %s\033[0m", str(e))
+                rospy.logerr("Error processing sequence: %s", str(e))
                 with self.queue_lock:
                     self.is_processing = False
                     self.current_sequence_id = None
@@ -294,14 +294,14 @@ class Bridge():
 if __name__ == '__main__':
     try:
         br = Bridge()
-        rospy.loginfo("\033[96m" + "="*60 + "\033[0m")
-        rospy.loginfo("\033[96m🌉 Bridge running - MQTT → ROS\033[0m")
-        rospy.loginfo("\033[96m📡 ROS Topics:\033[0m")
-        rospy.loginfo("\033[96m   - milking/cow_data (JSON)\033[0m")
-        rospy.loginfo("\033[96m   - calf_num (legacy)\033[0m")
-        rospy.loginfo("\033[96m" + "="*60 + "\033[0m")
+        rospy.loginfo("="*60)
+        rospy.loginfo("Bridge running - MQTT to ROS")
+        rospy.loginfo("ROS Topics:")
+        rospy.loginfo("   - milking/cow_data (JSON)")
+        rospy.loginfo("   - calf_num (legacy)")
+        rospy.loginfo("="*60)
         rospy.spin()
     except rospy.ROSInterruptException:
-        rospy.loginfo("\033[96m👋 Shutting down bridge\033[0m")
+        rospy.loginfo("Shutting down bridge")
     except KeyboardInterrupt:
-        rospy.loginfo("\033[96m👋 Shutting down bridge\033[0m")
+        rospy.loginfo("Shutting down bridge")

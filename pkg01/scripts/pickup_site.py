@@ -89,16 +89,16 @@ class pickupSite():
         with self.queue_lock:
             self.globally_used_cows.update(cow_numbers)
         
-        print(f"\n📋 New sequence received: {len(sequence)} cows")
-        print(f"🔖 Sequence ID: {full_sequence_id}")
-        print(f"🐄 Globally used cows: {sorted(self.globally_used_cows)}")
+        print(f"\nNew sequence received: {len(sequence)} cows")
+        print(f"Sequence ID: {full_sequence_id}")
+        print(f"Globally used cows: {sorted(self.globally_used_cows)}")
         
         total_liters = sum(float(liters) for _, liters in sequence)
-        print(f"📊 Total liters in sequence: {total_liters:.1f}L")
+        print(f"Total liters in sequence: {total_liters:.1f}L")
         
         # Log sequence details
         for idx, (cow_num, liters) in enumerate(sequence, 1):
-            print(f"   {idx}. Cow {cow_num} → {liters} liters")
+            print(f"   {idx}. Cow {cow_num} -> {liters} liters")
         
         # Add dummy entry to indicate return to base
         print(f"   {len(sequence) + 1}. Return to base (cow_id = -1)")
@@ -125,7 +125,7 @@ class pickupSite():
             qos=2  # Exactly once delivery
         )
         
-        print(f"📡 Published complete sequence to '{self.topic}'")
+        print(f"Published complete sequence to '{self.topic}'")
         print("="*60 + "\n")
         
         # Force UI update to show newly blocked cows

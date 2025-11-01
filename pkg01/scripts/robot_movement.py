@@ -202,11 +202,11 @@ class RobotMovementPipeline:
             rospy.loginfo("Deleting bucket from Gazebo...")
             response = self.delete_model_service('bucket')
             if response.success:
-                rospy.loginfo("✅ Bucket successfully deleted from simulation")
+                rospy.loginfo("Bucket successfully deleted from simulation")
             else:
-                rospy.logwarn(f"⚠️ Failed to delete bucket: {response.status_message}")
+                rospy.logwarn(f"Failed to delete bucket: {response.status_message}")
         except rospy.ServiceException as e:
-            rospy.logerr(f"❌ Service call failed: {e}")
+            rospy.logerr(f"Service call failed: {e}")
     
     def _spawn_bucket(self):
         """Spawn a new bucket at the initial position."""
@@ -235,7 +235,7 @@ class RobotMovementPipeline:
                 w=quaternion[3]
             )
             
-            rospy.loginfo(f"🪣 Spawning new bucket '{bucket_name}' at initial position...")
+            rospy.loginfo(f"Spawning new bucket '{bucket_name}' at initial position...")
             response = self.spawn_model_service(
                 model_name=bucket_name,  # Use unique name
                 model_xml=bucket_sdf,
@@ -245,16 +245,16 @@ class RobotMovementPipeline:
             )
             
             if response.success:
-                rospy.loginfo(f"✅ Bucket '{bucket_name}' successfully spawned!")
+                rospy.loginfo(f"Bucket '{bucket_name}' successfully spawned!")
             else:
-                rospy.logwarn(f"⚠️ Failed to spawn bucket '{bucket_name}': {response.status_message}")
+                rospy.logwarn(f"Failed to spawn bucket '{bucket_name}': {response.status_message}")
                 
         except FileNotFoundError:
-            rospy.logerr(f"❌ Bucket model file not found: {self.bucket_model_path}")
+            rospy.logerr(f"Bucket model file not found: {self.bucket_model_path}")
         except rospy.ServiceException as e:
-            rospy.logerr(f"❌ Service call failed: {e}")
+            rospy.logerr(f"Service call failed: {e}")
         except Exception as e:
-            rospy.logerr(f"❌ Error spawning bucket: {e}")
+            rospy.logerr(f"Error spawning bucket: {e}")
 
     def _joint_state_callback(self, msg):
         """Store the latest joint states."""
@@ -300,14 +300,14 @@ class RobotMovementPipeline:
             self.move_group.clear_pose_targets()
             
             if success:
-                rospy.loginfo(f"✅ Manipulator successfully moved to {pose} position")
+                rospy.loginfo(f"Manipulator successfully moved to {pose} position")
                 return True
             else:
-                rospy.logwarn(f"⚠️ Failed to execute manipulator movement to {pose}")
+                rospy.logwarn(f"Failed to execute manipulator movement to {pose}")
                 return False
                 
         except Exception as e:
-            rospy.logerr(f"❌ Error moving manipulator to {pose}: {e}")
+            rospy.logerr(f"Error moving manipulator to {pose}: {e}")
             import traceback
             rospy.logerr(traceback.format_exc())
             return False
@@ -349,16 +349,16 @@ class RobotMovementPipeline:
             self.gripper_group.clear_pose_targets()
             
             if success:
-                rospy.loginfo(f"✅ Gripper successfully moved to {pose} position")
+                rospy.loginfo(f"Gripper successfully moved to {pose} position")
                 # Add delay to ensure gripper settles and contacts stabilize
                 time.sleep(1.0)
                 return True
             else:
-                rospy.logwarn(f"⚠️ Failed to execute gripper movement to {pose}")
+                rospy.logwarn(f"Failed to execute gripper movement to {pose}")
                 return False
                 
         except Exception as e:
-            rospy.logerr(f"❌ Error moving gripper to {pose}: {e}")
+            rospy.logerr(f"Error moving gripper to {pose}: {e}")
             import traceback
             rospy.logerr(traceback.format_exc())
             return False
@@ -437,12 +437,12 @@ class RobotMovementPipeline:
         
         # If this was a cow2base task (bucket placed at cow 0 position), schedule deletion
         if task == "cow2base":
-            rospy.loginfo("🗑️  Bucket placed - scheduling automatic deletion...")
+            rospy.loginfo("Bucket placed - scheduling automatic deletion...")
             self._delete_bucket_after_delay(delay_seconds=5.0)
     
     def _keyboard_listener(self):
         """Listen for keyboard input in a separate thread."""
-        rospy.loginfo("🎹 Keyboard listener started. Press 'a' to spawn bucket, 'q' to quit")
+        rospy.loginfo("Keyboard listener started. Press 'a' to spawn bucket, 'q' to quit")
         
         # Save terminal settings
         old_settings = termios.tcgetattr(sys.stdin)
@@ -455,7 +455,7 @@ class RobotMovementPipeline:
                     key = sys.stdin.read(1)
                     
                     if key.lower() == 'a':
-                        rospy.loginfo("🪣 'a' pressed - spawning bucket...")
+                        rospy.loginfo("'a' pressed - spawning bucket...")
                         self._spawn_bucket()
                     # elif key.lower() == 'q':
                     #     rospy.loginfo("👋 'q' pressed - shutting down...")
