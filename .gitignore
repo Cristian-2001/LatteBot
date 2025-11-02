@@ -5,3 +5,4 @@ robotiq/
 .venv/
 pkg01/scripts/__pycache__/
 .gitignore
+*/.vscode/
