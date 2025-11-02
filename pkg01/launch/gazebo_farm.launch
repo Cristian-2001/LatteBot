@@ -73,14 +73,14 @@
   </group>
 
   <!-- Optional: Launch RViz for visualization -->
-  <!--<arg name="rviz" default="true" doc="Launch RViz"/>
-  <group if="$(arg rviz)">-->
+  <arg name="rviz" default="true" doc="Launch RViz"/>
+  <group if="$(arg rviz)">
     <!-- Launch MoveIt RViz if MoveIt is enabled, otherwise standard RViz -->
-    <!--<include if="$(arg moveit)" file="$(find ur10e_moveit_config)/launch/moveit_rviz.launch">
+    <include if="$(arg moveit)" file="$(find ur10e_moveit_config)/launch/moveit_rviz.launch">
       <arg name="rviz_config" value="$(find pkg01)/config/rvizconfig01.rviz"/>
     </include>
     <node unless="$(arg moveit)" name="rviz" pkg="rviz" type="rviz"
           args="-d $(find pkg01)/config/rvizconfig01.rviz"/>
-  </group>-->
+  </group>
 
 </launch>

@@ -24,6 +24,7 @@ INTERMEDIATE_GRASP = "intermediate_grasp"
 GRASP = "grasp"
 INTERMEDIATE_PLACE = "intermediate_place"
 PLACE = "place"
+PLACE_LEAVE = "place_leave"
 OPEN = "open"
 CLOSE = "close"
 GRASP_HANDLE = "grasp_handle"  # Intermediate gripper position for bucket handle
@@ -124,7 +125,7 @@ class RobotMovementPipeline:
             ("wait", 1.0),  # Extra stability after lifting
             ("platform", cow_pos_end),
             ("manipulator", INTERMEDIATE_PLACE),
-            ("manipulator", PLACE),
+            ("manipulator", PLACE_LEAVE),
             ("wait", 2.0),  # Wait before releasing
             ("gripper", OPEN),
             ("wait", 2.0),  # Wait for release
@@ -151,7 +152,7 @@ class RobotMovementPipeline:
             ("manipulator", INTERMEDIATE_GRASP),
             ("platform", cow_pos_end),
             ("manipulator", INTERMEDIATE_PLACE),
-            ("manipulator", PLACE),
+            ("manipulator", PLACE_LEAVE),
             ("wait", 2.0),  # Wait before releasing
             ("gripper", OPEN),
             ("wait", 2.0),  # Wait for release
