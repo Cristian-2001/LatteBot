@@ -174,10 +174,11 @@ class Bridge():
         #         self.starting_weights[index] = 12
         #         self.starting_time[self.topic_publish] = time.time()
         
+        print("CALF NUM:", calf_num)
         print("TIME:", time.time() - self.starting_time[calf_num])  
         if weight <= self.starting_weights[calf_num] - self.calf_limits[calf_num]:
             val = 1
-        elif time.time() - self.starting_time[calf_num] > 90:
+        elif time.time() - self.starting_time[calf_num] > 120:
             val = 0
 
         if val is not None:
