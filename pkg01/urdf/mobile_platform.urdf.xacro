@@ -8,7 +8,7 @@
     <xacro:property name="platform_length" value="1.0"/>
     <xacro:property name="platform_width" value="0.8"/>
     <xacro:property name="platform_height" value="0.15"/>
-    <xacro:property name="platform_mass" value="50.0"/>
+    <xacro:property name="platform_mass" value="500.0"/>  <!-- INCREASED from 50 to 500 kg for stability -->
 
     <!-- Material for platform -->
     <material name="DarkGrey">
@@ -114,7 +114,7 @@
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <axis xyz="1 0 0"/>  <!-- Motion along X axis -->
       <limit lower="0.0" upper="10.0" effort="1000.0" velocity="1.0"/>
-      <dynamics damping="50.0" friction="10.0"/>
+      <dynamics damping="500.0" friction="100.0"/>  <!-- INCREASED damping 50→500, friction 10→100 for stability -->
     </joint>
 
     <!-- Robot mounting plate on top of platform -->
@@ -157,8 +157,10 @@
 
     <gazebo reference="${prefix}platform_base">
       <material>Gazebo/DarkGrey</material>
-      <mu1>0.8</mu1>
-      <mu2>0.8</mu2>
+      <mu1>100.0</mu1>  <!-- INCREASED from 0.8 to 100 - extreme friction to prevent sliding -->
+      <mu2>100.0</mu2>  <!-- INCREASED from 0.8 to 100 - extreme friction to prevent sliding -->
+      <kp>10000000.0</kp>  <!-- Added: 10M stiffness for rigid contact -->
+      <kd>10000.0</kd>     <!-- Added: 10k damping for stability -->
     </gazebo>
 
     <gazebo reference="${prefix}robot_mount">

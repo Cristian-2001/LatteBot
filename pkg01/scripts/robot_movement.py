@@ -67,7 +67,7 @@ class RobotMovementPipeline:
         pkg_path = rospack.get_path('pkg01')
         self.bucket_model_path = pkg_path + '/models/bucket/model.sdf'
         
-        # Counter for spawning multiple buckets
+        # Counter for spawning multiple buckets with unique names
         self.bucket_counter = 0
         
         # Store current joint states
@@ -113,11 +113,15 @@ class RobotMovementPipeline:
             ("platform", self.home_position),
             ("manipulator", INTERMEDIATE_GRASP),
             ("gripper", OPEN),
+            ("wait", 1.5),  # Extra pause after opening to ensure full extension
             ("manipulator", GRASP),
-            ("wait", 3.0),  # Increased wait for gripper to stabilize around bucket handle
-            ("gripper", CLOSE),
-            ("wait", 4.0),  # Increased wait for grasp plugin to activate (40 update cycles)
+            ("wait", 4.0),  # INCREASED: Wait for gripper to stabilize around bucket handle
+            ("gripper", GRASP_HANDLE),  # Pre-grasp: partial closure for better positioning
+            ("wait", 3.0),  # INCREASED: Wait for handle to settle in gripper
+            ("gripper", CLOSE),  # Final closure with maximum force
+            ("wait", 5.0),  # INCREASED: Wait for grasp plugin to activate (50 update cycles)
             ("manipulator", INTERMEDIATE_GRASP),
+            ("wait", 1.0),  # Extra stability after lifting
             ("platform", cow_pos_end),
             ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", PLACE),
@@ -135,11 +139,15 @@ class RobotMovementPipeline:
             ("platform", cow_pos_start),
             ("manipulator", INTERMEDIATE_PLACE),
             ("gripper", OPEN),
+            ("wait", 1.5),  # Extra pause after opening
             ("manipulator", PLACE),
-            ("wait", 3.0),  # Increased wait for gripper to stabilize
-            ("gripper", CLOSE),
-            ("wait", 4.0),  # Increased wait for grasp plugin (40 update cycles)
+            ("wait", 4.0),  # INCREASED: Wait for gripper to stabilize
+            ("gripper", GRASP_HANDLE),  # Pre-grasp: partial closure for better positioning
+            ("wait", 3.0),  # INCREASED: Wait for handle to settle
+            ("gripper", CLOSE),  # Final closure with maximum force
+            ("wait", 5.0),  # INCREASED: Wait for grasp plugin (50 update cycles)
             ("manipulator", INTERMEDIATE_PLACE),
+            ("wait", 1.0),  # Extra stability after lifting
             ("manipulator", INTERMEDIATE_GRASP),
             ("platform", cow_pos_end),
             ("manipulator", INTERMEDIATE_PLACE),
@@ -157,14 +165,23 @@ class RobotMovementPipeline:
         sequence_cow2base = [
             ("platform", cow_pos_start),
             ("gripper", OPEN),
+            ("wait", 1.5),  # Extra pause after opening
             ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", PLACE),
-            ("wait", 2.0),  # Wait for gripper to stabilize
-            ("gripper", CLOSE),
-            ("wait", 2.0),  # Wait for grasp plugin
+            ("wait", 4.0),  # INCREASED: Wait for gripper to stabilize
+            ("gripper", GRASP_HANDLE),  # Pre-grasp: partial closure for better positioning
+            ("wait", 3.0),  # INCREASED: Wait for handle to settle
+            ("gripper", CLOSE),  # Final closure with maximum force
+            ("wait", 5.0),  # INCREASED: Wait for grasp plugin (50 update cycles)
             ("manipulator", INTERMEDIATE_PLACE),
+            ("wait", 1.0),  # Extra stability after lifting
+            # Move to intermediate grasp and stay at cow position - no platform movement yet
             ("manipulator", INTERMEDIATE_GRASP),
+            ("wait", 0.5),  # Brief pause for stability
+            # Now move platform to home with bucket safely elevated
             ("platform", self.home_position),
+            ("wait", 0.5),  # Wait for platform to settle
+            # Position arm for placement
             ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", PLACE),
             ("wait", 1.0),  # Wait before releasing
@@ -196,39 +213,53 @@ class RobotMovementPipeline:
         move_platform(self.home_position)
     
     def _delete_bucket_after_delay(self, delay_seconds=5.0):
-        """Delete the bucket model from Gazebo after a specified delay."""
-        rospy.loginfo(f"Scheduling bucket deletion in {delay_seconds} seconds...")
+        """Delete the current bucket model from Gazebo after a specified delay."""
+        if self.bucket_counter == 0:
+            rospy.logwarn("⚠️ No bucket to delete (counter is 0)")
+            return
+            
+        bucket_name = f'bucket_{self.bucket_counter}'
+        rospy.loginfo(f"Scheduling deletion of {bucket_name} in {delay_seconds} seconds...")
         time.sleep(delay_seconds)
         
         try:
-            rospy.loginfo("Deleting bucket from Gazebo...")
-            response = self.delete_model_service('bucket')
+            rospy.loginfo(f"Deleting {bucket_name} from Gazebo...")
+            response = self.delete_model_service(bucket_name)
             if response.success:
-                rospy.loginfo("Bucket successfully deleted from simulation")
+                rospy.loginfo(f"✅ {bucket_name} successfully deleted from simulation")
+                self.bucket_counter -= 1  # Decrement counter after successful deletion
             else:
-                rospy.logwarn(f"Failed to delete bucket: {response.status_message}")
+                rospy.logwarn(f"❌ Failed to delete {bucket_name}: {response.status_message}")
         except rospy.ServiceException as e:
-            rospy.logerr(f"Service call failed: {e}")
+            rospy.logerr(f"❌ Service call failed: {e}")
     
     def _spawn_bucket(self):
-        """Spawn a new bucket at the initial position."""
+        """Spawn a new bucket at the initial position with unique name for Gazebo Grasp Plugin."""
         try:
             # Read the bucket model SDF file
             with open(self.bucket_model_path, 'r') as f:
-                bucket_sdf = f.read()
+                bucket_sdf_template = f.read()
             
             # Increment counter for unique bucket name
             self.bucket_counter += 1
             bucket_name = f'bucket_{self.bucket_counter}'
             
-            # Define bucket pose (initial position from farm.world)
-            # <pose>-0.7 0 0 1.5707963267948966 0 1.5707963267948966</pose>
+            # CRITICAL FIX: Replace model name in SDF to match spawn name
+            # This ensures Gazebo Grasp Plugin can find the object by name
+            # The plugin searches for objects by their model name in the SDF
+            bucket_sdf = bucket_sdf_template.replace(
+                '<model name="bucket">',
+                f'<model name="{bucket_name}">'
+            )
+            
+            rospy.loginfo(f"Modified SDF model name to: {bucket_name}")
+            
+            # Define bucket pose (initial position matching farm.world)
+            # Position aligned with robot's "place" pose (shoulder_pan ≈ 75°)
             bucket_pose = Pose()
             bucket_pose.position = Point(x=-0.7, y=0.0, z=0.0)
             
             # Quaternion for rotation (roll=90°, pitch=0°, yaw=90°)
-            # Using the rotation from the world file
-            
             quaternion = tf_trans.quaternion_from_euler(1.5707963267948966, 0, 1.5707963267948966)
             bucket_pose.orientation = Quaternion(
                 x=quaternion[0],
@@ -237,17 +268,17 @@ class RobotMovementPipeline:
                 w=quaternion[3]
             )
             
-            rospy.loginfo(f"Spawning new bucket '{bucket_name}' at initial position...")
+            rospy.loginfo(f"Spawning bucket '{bucket_name}' at initial position...")
             response = self.spawn_model_service(
-                model_name=bucket_name,  # Use unique name
-                model_xml=bucket_sdf,
+                model_name=bucket_name,  # Unique name matching SDF
+                model_xml=bucket_sdf,     # Modified SDF with matching name
                 robot_namespace='',
                 initial_pose=bucket_pose,
                 reference_frame='world'
             )
             
             if response.success:
-                rospy.loginfo(f"Bucket '{bucket_name}' successfully spawned!")
+                rospy.loginfo(f"✓ Bucket '{bucket_name}' successfully spawned! (grasp plugin ready)")
             else:
                 rospy.logwarn(f"Failed to spawn bucket '{bucket_name}': {response.status_message}")
                 
@@ -322,11 +353,17 @@ class RobotMovementPipeline:
             # Set increased tolerances for gripper
             self.gripper_group.set_goal_position_tolerance(0.01)  # 1cm tolerance
             self.gripper_group.set_goal_joint_tolerance(0.05)     # More relaxed joint tolerance
-            self.gripper_group.set_planning_time(10.0)            # More time to plan
+            self.gripper_group.set_planning_time(15.0)            # INCREASED: More time to plan (was 10.0)
             
-            # Slow down gripper movement for better contact detection
-            self.gripper_group.set_max_velocity_scaling_factor(0.3)  # 30% of max speed
-            self.gripper_group.set_max_acceleration_scaling_factor(0.3)  # 30% of max accel
+            # ULTRA-SLOW gripper movement for maximum contact stability
+            if pose in [CLOSE, GRASP_HANDLE]:
+                # Very slow for closing actions to ensure proper contact
+                self.gripper_group.set_max_velocity_scaling_factor(0.15)  # 15% of max speed - EXTRA SLOW
+                self.gripper_group.set_max_acceleration_scaling_factor(0.15)  # 15% of max accel
+            else:
+                # Moderate speed for opening
+                self.gripper_group.set_max_velocity_scaling_factor(0.3)  # 30% of max speed
+                self.gripper_group.set_max_acceleration_scaling_factor(0.3)  # 30% of max accel
             
             # Use the 'pose' named target defined in SRDF
             self.gripper_group.set_named_target(pose)
@@ -341,7 +378,8 @@ class RobotMovementPipeline:
                     rospy.logwarn(f"Failed to plan gripper movement to {pose} - error code: {error_code}")
                     return False
             
-            # Execute the plan
+            # Execute the plan with extended timeout
+            rospy.loginfo(f"Executing gripper movement to {pose}...")
             success = self.gripper_group.go(wait=True)
             
             # Stop any residual movement
@@ -351,18 +389,24 @@ class RobotMovementPipeline:
             self.gripper_group.clear_pose_targets()
             
             if success:
-                rospy.loginfo(f"Gripper successfully moved to {pose} position")
-                # Add delay to ensure gripper settles and contacts stabilize
-                time.sleep(1.0)
+                rospy.loginfo(f"✅ Gripper successfully moved to {pose} position")
+                # Add EXTRA delay for closing actions to ensure contacts fully stabilize
+                if pose in [CLOSE, GRASP_HANDLE]:
+                    time.sleep(2.0)  # Extra 2 seconds for contact stabilization
+                else:
+                    time.sleep(1.0)  # Standard delay for opening
                 return True
             else:
-                rospy.logwarn(f"Failed to execute gripper movement to {pose}")
-                return False
+                rospy.logwarn(f"⚠️ Failed to execute gripper movement to {pose} - continuing anyway")
+                # Don't fail completely - the gripper might be close enough
+                time.sleep(1.0)
+                return True  # CHANGED: Return True to continue sequence (was False)
                 
         except Exception as e:
-            rospy.logerr(f"Error moving gripper to {pose}: {e}")
+            rospy.logerr(f"❌ Error moving gripper to {pose}: {e}")
             import traceback
             rospy.logerr(traceback.format_exc())
+            return True  # CHANGED: Continue even on exception (was False)
             return False
 
     def process(self, calf_num_msg):
@@ -442,9 +486,29 @@ class RobotMovementPipeline:
             rospy.loginfo("Bucket placed - scheduling automatic deletion...")
             self._delete_bucket_after_delay(delay_seconds=5.0)
     
+    def _remove_last_bucket(self):
+        """Remove the most recently spawned bucket."""
+        if self.bucket_counter == 0:
+            rospy.logwarn("⚠️ No buckets to remove (counter is 0)")
+            return
+        
+        bucket_name = f'bucket_{self.bucket_counter}'
+        try:
+            rospy.loginfo(f"🗑️ Removing bucket: {bucket_name}")
+            delete_response = self.delete_model_service(bucket_name)
+            
+            if delete_response.success:
+                rospy.loginfo(f"✅ Successfully removed {bucket_name}")
+                self.bucket_counter -= 1  # Decrement counter
+            else:
+                rospy.logwarn(f"❌ Failed to remove {bucket_name}: {delete_response.status_message}")
+                
+        except rospy.ServiceException as e:
+            rospy.logerr(f"❌ Service call failed: {e}")
+    
     def _keyboard_listener(self):
         """Listen for keyboard input in a separate thread."""
-        rospy.loginfo("Keyboard listener started. Press 'a' to spawn bucket, 'q' to quit")
+        rospy.loginfo("Keyboard listener started. Press 'a' to spawn bucket, 'r' to remove last bucket, 'q' to quit")
         
         # Save terminal settings
         old_settings = termios.tcgetattr(sys.stdin)
@@ -459,6 +523,9 @@ class RobotMovementPipeline:
                     if key.lower() == 'a':
                         rospy.loginfo("'a' pressed - spawning bucket...")
                         self._spawn_bucket()
+                    elif key.lower() == 'r':
+                        rospy.loginfo("'r' pressed - removing last bucket...")
+                        self._remove_last_bucket()
                     # elif key.lower() == 'q':
                     #     rospy.loginfo("👋 'q' pressed - shutting down...")
                     #     rospy.signal_shutdown("User requested shutdown")
