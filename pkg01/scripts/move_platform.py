@@ -24,8 +24,8 @@ def move_platform(position, duration=5.0) -> bool:
         return False
     
     # Validate position
-    if position < 0.0 or position > 10.0:
-        rospy.logerr("Position must be between 0.0 and 10.0 meters!")
+    if position < 0.0 or position > 20.0:
+        rospy.logerr("Position must be between 0.0 and 20.0 meters!")
         return False
     
     # Create action client

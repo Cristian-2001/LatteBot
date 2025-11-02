@@ -34,12 +34,7 @@ positions = {
     1: 3,
     2: 5,
     3: 7,
-    4: 9,
-    5: 11,
-    6: 13,
-    7: 15,
-    8: 17,
-    9: 19
+    4: 9
 }
 
 class RobotMovementPipeline:
@@ -112,23 +107,25 @@ class RobotMovementPipeline:
     def _base2cow(self, cow_pos_end):
         sequence_base2cow = [
             ("platform", self.home_position),
+            ("gripper", OPEN),  # Ensure gripper is fully open to detach any previous object
+            ("wait", 2.0),  # Wait for full detach
             ("manipulator", INTERMEDIATE_GRASP),
-            ("gripper", OPEN),
-            ("wait", 1.5),  # Extra pause after opening to ensure full extension
+            ("gripper", OPEN),  # Second open to ensure grasp plugin reset
+            ("wait", 2.0),  # INCREASED: Extra pause after opening to ensure full extension
             ("manipulator", GRASP),
-            ("wait", 4.0),  # INCREASED: Wait for gripper to stabilize around bucket handle
+            ("wait", 5.0),  # INCREASED: Wait longer for gripper to stabilize around bucket handle
             ("gripper", GRASP_HANDLE),  # Pre-grasp: partial closure for better positioning
-            ("wait", 3.0),  # INCREASED: Wait for handle to settle in gripper
+            ("wait", 4.0),  # INCREASED: Wait longer for handle to settle in gripper
             ("gripper", CLOSE),  # Final closure with maximum force
-            ("wait", 5.0),  # INCREASED: Wait for grasp plugin to activate (50 update cycles)
+            ("wait", 8.0),  # INCREASED: Wait MUCH longer for grasp plugin to activate (80 update cycles at 10Hz)
             ("manipulator", INTERMEDIATE_GRASP),
-            ("wait", 1.0),  # Extra stability after lifting
+            ("wait", 2.0),  # INCREASED: Extra stability after lifting
             ("platform", cow_pos_end),
             ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", PLACE_LEAVE),
             ("wait", 2.0),  # Wait before releasing
             ("gripper", OPEN),
-            ("wait", 2.0),  # Wait for release
+            ("wait", 3.0),  # INCREASED: Extra wait to ensure complete detach before next cycle
             ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", HOME)
         ]
@@ -140,15 +137,15 @@ class RobotMovementPipeline:
             ("platform", cow_pos_start),
             ("manipulator", INTERMEDIATE_PLACE),
             ("gripper", OPEN),
-            ("wait", 1.5),  # Extra pause after opening
+            ("wait", 2.0),  # INCREASED: Extra pause after opening
             ("manipulator", PLACE),
-            ("wait", 4.0),  # INCREASED: Wait for gripper to stabilize
+            ("wait", 5.0),  # INCREASED: Wait longer for gripper to stabilize
             ("gripper", GRASP_HANDLE),  # Pre-grasp: partial closure for better positioning
-            ("wait", 3.0),  # INCREASED: Wait for handle to settle
+            ("wait", 4.0),  # INCREASED: Wait longer for handle to settle
             ("gripper", CLOSE),  # Final closure with maximum force
-            ("wait", 5.0),  # INCREASED: Wait for grasp plugin (50 update cycles)
+            ("wait", 8.0),  # INCREASED: Wait MUCH longer for grasp plugin (80 update cycles)
             ("manipulator", INTERMEDIATE_PLACE),
-            ("wait", 1.0),  # Extra stability after lifting
+            ("wait", 2.0),  # INCREASED: Extra stability after lifting
             ("manipulator", INTERMEDIATE_GRASP),
             ("platform", cow_pos_end),
             ("manipulator", INTERMEDIATE_PLACE),
@@ -166,22 +163,22 @@ class RobotMovementPipeline:
         sequence_cow2base = [
             ("platform", cow_pos_start),
             ("gripper", OPEN),
-            ("wait", 1.5),  # Extra pause after opening
+            ("wait", 2.0),  # INCREASED: Extra pause after opening
             ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", PLACE),
-            ("wait", 4.0),  # INCREASED: Wait for gripper to stabilize
+            ("wait", 5.0),  # INCREASED: Wait longer for gripper to stabilize
             ("gripper", GRASP_HANDLE),  # Pre-grasp: partial closure for better positioning
-            ("wait", 3.0),  # INCREASED: Wait for handle to settle
+            ("wait", 4.0),  # INCREASED: Wait longer for handle to settle
             ("gripper", CLOSE),  # Final closure with maximum force
-            ("wait", 5.0),  # INCREASED: Wait for grasp plugin (50 update cycles)
+            ("wait", 8.0),  # INCREASED: Wait MUCH longer for grasp plugin (80 update cycles)
             ("manipulator", INTERMEDIATE_PLACE),
-            ("wait", 1.0),  # Extra stability after lifting
+            ("wait", 2.0),  # INCREASED: Extra stability after lifting
             # Move to intermediate grasp and stay at cow position - no platform movement yet
             ("manipulator", INTERMEDIATE_GRASP),
-            ("wait", 0.5),  # Brief pause for stability
+            ("wait", 1.0),  # INCREASED: pause for stability
             # Now move platform to home with bucket safely elevated
             ("platform", self.home_position),
-            ("wait", 0.5),  # Wait for platform to settle
+            ("wait", 1.0),  # INCREASED: Wait for platform to settle
             # Position arm for placement
             ("manipulator", INTERMEDIATE_PLACE),
             ("manipulator", PLACE),
@@ -214,12 +211,8 @@ class RobotMovementPipeline:
         move_platform(self.home_position)
     
     def _delete_bucket_after_delay(self, delay_seconds=5.0):
-        """Delete the current bucket model from Gazebo after a specified delay."""
-        if self.bucket_counter == 0:
-            rospy.logwarn("⚠️ No bucket to delete (counter is 0)")
-            return
-            
-        bucket_name = f'bucket_{self.bucket_counter}'
+        """Delete the bucket model from Gazebo after a specified delay."""
+        bucket_name = 'bucket'  # Fixed name
         rospy.loginfo(f"Scheduling deletion of {bucket_name} in {delay_seconds} seconds...")
         time.sleep(delay_seconds)
         
@@ -227,33 +220,33 @@ class RobotMovementPipeline:
             rospy.loginfo(f"Deleting {bucket_name} from Gazebo...")
             response = self.delete_model_service(bucket_name)
             if response.success:
-                rospy.loginfo(f"✅ {bucket_name} successfully deleted from simulation")
-                self.bucket_counter -= 1  # Decrement counter after successful deletion
+                rospy.loginfo(f"{bucket_name} successfully deleted from simulation")
             else:
-                rospy.logwarn(f"❌ Failed to delete {bucket_name}: {response.status_message}")
+                rospy.logwarn(f"Failed to delete {bucket_name}: {response.status_message}")
         except rospy.ServiceException as e:
-            rospy.logerr(f"❌ Service call failed: {e}")
+            rospy.logerr(f"Service call failed: {e}")
     
     def _spawn_bucket(self):
-        """Spawn a new bucket at the initial position with unique name for Gazebo Grasp Plugin."""
+        """Spawn a new bucket at the initial position. Uses fixed name 'bucket' for Gazebo Grasp Plugin compatibility."""
         try:
-            # Read the bucket model SDF file
+            # CRITICAL: Always use same name "bucket" for Gazebo Grasp Plugin
+            bucket_name = 'bucket'
+            
+            # Delete existing bucket if present (allows re-spawning)
+            try:
+                rospy.loginfo("Checking for existing bucket to delete...")
+                delete_response = self.delete_model_service(bucket_name)
+                if delete_response.success:
+                    rospy.loginfo("Old bucket deleted successfully")
+                    time.sleep(0.5)  # Pause to ensure cleanup completes
+            except rospy.ServiceException as e:
+                rospy.loginfo(f"No bucket to delete (first spawn or already gone): {e}")
+            
+            # Read the bucket model SDF file (always fresh from disk)
             with open(self.bucket_model_path, 'r') as f:
-                bucket_sdf_template = f.read()
+                bucket_sdf = f.read()
             
-            # Increment counter for unique bucket name
-            self.bucket_counter += 1
-            bucket_name = f'bucket_{self.bucket_counter}'
-            
-            # CRITICAL FIX: Replace model name in SDF to match spawn name
-            # This ensures Gazebo Grasp Plugin can find the object by name
-            # The plugin searches for objects by their model name in the SDF
-            bucket_sdf = bucket_sdf_template.replace(
-                '<model name="bucket">',
-                f'<model name="{bucket_name}">'
-            )
-            
-            rospy.loginfo(f"Modified SDF model name to: {bucket_name}")
+            rospy.loginfo(f"SDF model name: 'bucket' (fixed for grasp plugin)")
             
             # Define bucket pose (initial position matching farm.world)
             # Position aligned with robot's "place" pose (shoulder_pan ≈ 75°)
@@ -271,15 +264,15 @@ class RobotMovementPipeline:
             
             rospy.loginfo(f"Spawning bucket '{bucket_name}' at initial position...")
             response = self.spawn_model_service(
-                model_name=bucket_name,  # Unique name matching SDF
-                model_xml=bucket_sdf,     # Modified SDF with matching name
+                model_name=bucket_name,  # Always "bucket"
+                model_xml=bucket_sdf,    # Original SDF (name="bucket")
                 robot_namespace='',
                 initial_pose=bucket_pose,
                 reference_frame='world'
             )
             
             if response.success:
-                rospy.loginfo(f"✓ Bucket '{bucket_name}' successfully spawned! (grasp plugin ready)")
+                rospy.loginfo(f"Bucket '{bucket_name}' successfully spawned! (grasp plugin ready)")
             else:
                 rospy.logwarn(f"Failed to spawn bucket '{bucket_name}': {response.status_message}")
                 
@@ -390,7 +383,7 @@ class RobotMovementPipeline:
             self.gripper_group.clear_pose_targets()
             
             if success:
-                rospy.loginfo(f"✅ Gripper successfully moved to {pose} position")
+                rospy.loginfo(f"Gripper successfully moved to {pose} position")
                 # Add EXTRA delay for closing actions to ensure contacts fully stabilize
                 if pose in [CLOSE, GRASP_HANDLE]:
                     time.sleep(2.0)  # Extra 2 seconds for contact stabilization
@@ -398,13 +391,13 @@ class RobotMovementPipeline:
                     time.sleep(1.0)  # Standard delay for opening
                 return True
             else:
-                rospy.logwarn(f"⚠️ Failed to execute gripper movement to {pose} - continuing anyway")
+                rospy.logwarn(f"Failed to execute gripper movement to {pose} - continuing anyway")
                 # Don't fail completely - the gripper might be close enough
                 time.sleep(1.0)
                 return True  # CHANGED: Return True to continue sequence (was False)
                 
         except Exception as e:
-            rospy.logerr(f"❌ Error moving gripper to {pose}: {e}")
+            rospy.logerr(f"Error moving gripper to {pose}: {e}")
             import traceback
             rospy.logerr(traceback.format_exc())
             return True  # CHANGED: Continue even on exception (was False)
@@ -488,24 +481,19 @@ class RobotMovementPipeline:
             self._delete_bucket_after_delay(delay_seconds=5.0)
     
     def _remove_last_bucket(self):
-        """Remove the most recently spawned bucket."""
-        if self.bucket_counter == 0:
-            rospy.logwarn("⚠️ No buckets to remove (counter is 0)")
-            return
-        
-        bucket_name = f'bucket_{self.bucket_counter}'
+        """Remove the bucket (always named 'bucket')."""
+        bucket_name = 'bucket'  # Fixed name
         try:
-            rospy.loginfo(f"🗑️ Removing bucket: {bucket_name}")
+            rospy.loginfo(f"Removing bucket: {bucket_name}")
             delete_response = self.delete_model_service(bucket_name)
             
             if delete_response.success:
-                rospy.loginfo(f"✅ Successfully removed {bucket_name}")
-                self.bucket_counter -= 1  # Decrement counter
+                rospy.loginfo(f"Successfully removed {bucket_name}")
             else:
-                rospy.logwarn(f"❌ Failed to remove {bucket_name}: {delete_response.status_message}")
+                rospy.logwarn(f"Failed to remove {bucket_name}: {delete_response.status_message}")
                 
         except rospy.ServiceException as e:
-            rospy.logerr(f"❌ Service call failed: {e}")
+            rospy.logerr(f"Service call failed: {e}")
     
     def _keyboard_listener(self):
         """Listen for keyboard input in a separate thread."""

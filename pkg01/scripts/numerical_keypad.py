@@ -67,7 +67,7 @@ class CowMilkInterface:
         self.cow_dropdown = ttk.Combobox(
             cow_frame,
             textvariable=self.cow_var,
-            values=[f"Cow {i}" for i in range(10)],
+            values=[f"Cow {i}" for i in range(5)],  # Only 5 cows now (0-4)
             state='readonly',
             font=('Arial', 16),
             width=25
@@ -445,7 +445,7 @@ class CowMilkInterface:
         
         # Update dropdown values with indicators
         new_values = []
-        for i in range(10):
+        for i in range(5):  # Only 5 cows now (0-4)
             if i in globally_used:
                 # Cow was used in previous sequences (cannot be selected)
                 new_values.append(f"Cow {i} [X]")
@@ -459,7 +459,7 @@ class CowMilkInterface:
         self.cow_dropdown['values'] = new_values
         
         # Reset selection to first available cow (not globally used, not in sequence)
-        for i in range(10):
+        for i in range(5):  # Only 5 cows now (0-4)
             if i not in globally_used and i not in used_in_sequence:
                 self.cow_dropdown.current(i)
                 break
