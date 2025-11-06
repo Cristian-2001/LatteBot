@@ -5,8 +5,9 @@
   <description>
      An automatically generated package with all the configuration and launch files for using the ur10e with the MoveIt Motion Planning Framework
   </description>
-  <author email="cc@cc.cc">cc</author>
-  <maintainer email="cc@cc.cc">cc</maintainer>
+  <author email="casali.cristian01@gmail.com">Cristian Casali</author>
+  <maintainer email="casali.cristian01@gmail.com">Cristian Casali</maintainer>
+  <maintainer email="aldoflotta1@gmail.com">Aldo Flotta</maintainer>
 
   <license>BSD</license>
 
