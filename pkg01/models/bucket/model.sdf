@@ -74,16 +74,16 @@
         <surface>
           <friction>
             <ode>
-              <mu>1000.0</mu>      <!-- EXTREME friction - exceeds gripper to ensure grip -->
-              <mu2>1000.0</mu2>
+              <mu>2000.0</mu>      <!-- DOUBLED from 1000 - MAXIMUM friction for 100% reliability -->
+              <mu2>2000.0</mu2>
               <fdir1>0 0 1</fdir1>  <!-- Vertical friction direction for lift forces -->
             </ode>
           </friction>
           <contact>
             <ode>
-              <kp>3000000.0</kp>        <!-- 3M stiffness - exceeds gripper (2M) for stable grip -->
-              <kd>3000.0</kd>           <!-- 3000 damping - maximum stabilization -->
-              <max_vel>0.0001</max_vel> <!-- Ultra-slow correction: 0.1mm/s -->
+              <kp>5000000.0</kp>        <!-- INCREASED to 5M - ultra-stiff, exceeds gripper even more -->
+              <kd>5000.0</kd>           <!-- INCREASED to 5000 - maximum stabilization -->
+              <max_vel>0.00005</max_vel> <!-- HALVED - ultra-ultra-slow correction: 0.05mm/s -->
               <min_depth>0.00005</min_depth>  <!-- 0.05mm - matches gripper exactly -->
             </ode>
           </contact>

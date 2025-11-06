@@ -18,9 +18,14 @@ def move_platform(position, duration=5.0) -> bool:
         position (float): Target position in meters (0.0 to 10.0)
         duration (float): Time to reach the target position in seconds
     """
+    # Check for None
+    if position is None:
+        rospy.logerr("Position cannot be None!")
+        return False
+    
     # Validate position
-    if position < 0.0 or position > 10.0:
-        rospy.logerr("Position must be between 0.0 and 10.0 meters!")
+    if position < 0.0 or position > 20.0:
+        rospy.logerr("Position must be between 0.0 and 20.0 meters!")
         return False
     
     # Create action client

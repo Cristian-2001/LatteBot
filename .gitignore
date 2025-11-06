@@ -4,4 +4,5 @@ roboticsgroup_gazebo_plugins/
 robotiq/
 .venv/
 pkg01/scripts/__pycache__/
+.vscode/
 .gitignore

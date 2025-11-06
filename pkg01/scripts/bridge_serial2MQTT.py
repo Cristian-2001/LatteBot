@@ -9,10 +9,13 @@ import json
 import serial.tools.list_ports
 
 
+# DEBUG = True
+
+
 class Bridge():
 
     def __init__(self):
-        self.starting_time = time.time()
+        self.starting_time = {}     # dict of calf_num: time at which a bucket has arrived
 
         self.config = configparser.ConfigParser()
 
@@ -147,32 +150,46 @@ class Bridge():
         if self.inbuffer[0] != b'\xff':
             return False
 
-        self.topic_publish = int.from_bytes(self.inbuffer[1], byteorder='little')
+        calf_num = int.from_bytes(self.inbuffer[1], byteorder='little')
+        self.topic_publish = f"cow/{calf_num}"
 
         weight = int.from_bytes(self.inbuffer[2], byteorder='little')
         print(weight)
 
         print(self.topic_publish, self.calf_limits)
-        if self.topic_publish not in self.calf_limits:
+        if calf_num not in self.calf_limits:
             return
 
         # if it is the first time it receives a weight from this calf, save it
-        if self.topic_publish not in self.starting_weights:
-            self.starting_weights[self.topic_publish] = weight
+        # save also the time it receives the message
+        if calf_num not in self.starting_weights:
+            self.starting_weights[calf_num] = weight
+            self.starting_time[calf_num] = time.time()
+
+        # DEBUG: create fake weights, only for simulation purposes
+        # if DEBUG:
+        #     for index in range(0, 10):
+        #         if index == self.topic_publish:
+        #             continue
+        #         self.starting_weights[index] = 12
+        #         self.starting_time[self.topic_publish] = time.time()
         
-        if weight == 0:
-            del self.calf_limits[self.topic_publish]
-            del self.starting_weights[self.topic_publish]
-            return
-        if weight <= self.starting_weights[self.topic_publish] - self.calf_limits[self.topic_publish]:
+        print("CALF NUM:", calf_num)
+        print("TIME:", time.time() - self.starting_time[calf_num])  
+        if weight <= self.starting_weights[calf_num] - self.calf_limits[calf_num]:
             val = 1
-        elif time.time() - self.starting_time > 20:
+        elif time.time() - self.starting_time[calf_num] > 120:
             val = 0
 
         if val is not None:
             # TODO: serve il retain?
             # val can be 0 if reached time-out, 1 if the calf finished to drink
             self.clientMQTT.publish(topic=f'{self.topic_publish}', payload=val, retain=True)
+            val = None
+            del self.calf_limits[calf_num]
+            del self.starting_weights[calf_num]
+            del self.starting_time[calf_num]
+            return
 
 
 if __name__ == '__main__':

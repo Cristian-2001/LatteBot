@@ -16,7 +16,7 @@ int dati[5];
 
 size_t DATI = 5;
 
-int weight = 10;
+int weight = 12;
 int buttonState = 0;
 unsigned long timestamp;
 
@@ -59,7 +59,7 @@ void loop() {
       digitalWrite(ledPin, LOW);
     }
     else if (buttonState == HIGH) {
-      weight = 10;
+      weight = 12;
       digitalWrite(ledPin, HIGH);
     }
 
