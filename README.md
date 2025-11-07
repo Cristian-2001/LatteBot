@@ -208,64 +208,44 @@ graph LR
 
 ## 🏗️ System Architecture
 
-<div align="center">
-```
-┌─────────────────┐         ┌──────────────┐         ┌─────────────────┐
-│  Operator UI    │         │ MQTT Bridge  │         │ Robot Controller│
-│   (Windows)     │ ──MQTT─→│  (Linux/WSL) │ ──ROS──→│   (Linux/WSL)   │
-│                 │         │              │         │                 │
-│ • Tkinter GUI   │         │ • Queue Mgmt │         │ • Platform Ctrl │
-│ • Sequence Plan │         │ • Topic Trans│         │ • MoveIt Plan   │
-│ • Cow Tracking  │         │ • State Sync │         │ • Gripper Ctrl  │
-└─────────────────┘         └──────────────┘         └────────┬────────┘
-                                                               │
-        ┌──────────────────────────────────────────────────────┘
-        │
-        ▼
-┌─────────────────┐                                 ┌──────────────────┐
-│ Serial Bridge   │                                 │ Gazebo Simulation│
-│   (Windows)     │                                 │   (Linux/WSL)    │
-│                 │                                 │                  │
-│ • Serial → MQTT │                                 │ • Physics Engine │
-│ • Weight Detect │                                 │ • Contact Model  │
-└────────┬────────┘                                 │ • Visualization  │
-         │                                          └──────────────────┘
-         ▼
-┌─────────────────┐
-│ Arduino + Sensor│
-│                 │
-│ • Weight Sensor │
-│ • LCD Display   │
-│ • Button Input  │
-└─────────────────┘
-```
+The project uses a **three-tier distributed architecture**:
 
-</div>
+### Component Overview
+
+| Component | Platform | Purpose |
+|-----------|----------|---------|
+| **Operator Interface** | Windows | Tkinter GUI for planning cow milking sequences |
+| **MQTT Bridge** | Linux/WSL | Translates MQTT messages to ROS topics with queue management |
+| **Robot Controller** | Linux/WSL | Orchestrates platform motion, MoveIt planning, and gripper control |
+| **Serial Bridge** | Windows | Reads Arduino sensor data and publishes to MQTT |
+| **Arduino System** | Hardware | Monitors bucket weight via load cells with OLED display |
+| **Gazebo Simulation** | Linux/WSL | Executes physics-based movements with contact-based grasping |
 
 ### Communication Flow
 
-1. **Operator Interface** (Windows) → Plans cow milking sequences via Tkinter GUI, publishes to MQTT topic `Pickup-Site`
-2. **MQTT Bridge** (Linux/WSL) → Translates MQTT messages to ROS topics with queue management, subscribes to `Pickup-Site` and `cow/#`
-3. **Robot Controller** (Linux/WSL) → Orchestrates platform motion, MoveIt planning, and gripper control via ROS topics
-4. **Gazebo Simulation** → Executes physics-based movements with contact-based grasping
-5. **Arduino System** (Hardware) → Monitors bucket weight via load cells, displays on OLED screen
-6. **Serial Bridge** (Windows) → Reads Arduino serial data, publishes to `cow/{calf_num}` MQTT topics when consumption thresholds are met
+**MQTT Topics**:
+- `Pickup-Site` → Complete sequence data from operator to bridge
+- `cow/{calf_num}` → Weight sensor triggers from Arduino to bridge
 
-**Message Protocol**: HiveMQ Cloud with QoS 2 messaging ensures reliable delivery across the network boundary between Windows and Linux environments.
+**ROS Topics**:
+- `/calf_num` → Task commands from bridge to robot controller
+- `/ur10e_robot/joint_states` → Joint positions for monitoring
+- `/ur10e_robot/*_controller/follow_joint_trajectory` → Action servers for motion execution
 
-### Arduino Protocol
+**Message Protocol**: HiveMQ Cloud broker with QoS 2 (exactly-once delivery) ensures reliable communication across Windows/Linux boundary.
+
+### Arduino Serial Protocol
 
 The Arduino communicates via a custom binary protocol over serial (9600 baud):
 ```
-┌────────┬──────────┬────────┬────────┐
-│ Header │ Calf Num │ Weight │ Footer │
-│  0xFF  │  1 byte  │ 1 byte │  0xFE  │
-└────────┴──────────┴────────┴────────┘
+[ 0xFF | Calf_Num | Weight | 0xFE ]
+  ^       1 byte    1 byte    ^
+  Header                       Footer
 ```
 
 **Trigger Conditions**:
-- Weight drops below `starting_weight - milk_limit` → Publishes `1` (cow finished drinking)
-- 120-second timeout reached → Publishes `0` (incomplete feeding)
+- ✅ Weight drops below `starting_weight - milk_limit` → Publishes `1` (cow finished)
+- ⏰ 120-second timeout → Publishes `0` (incomplete feeding)
 
 ---
 
