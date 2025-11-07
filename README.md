@@ -10,7 +10,6 @@
 [![Python](https://img.shields.io/badge/Python-3.8+-green.svg)](https://www.python.org/)
 [![Gazebo](https://img.shields.io/badge/Gazebo-11-orange.svg)](http://gazebosim.org/)
 [![MoveIt](https://img.shields.io/badge/MoveIt-1.1-red.svg)](https://moveit.ros.org/)
-[![License](https://img.shields.io/badge/License-BSD-purple.svg)](LICENSE)
 
 [Overview](#-overview) •
 [Features](#-key-features) •
@@ -38,6 +37,8 @@ graph LR
     D --> G[Gazebo Simulation]
     E --> G
     F --> G
+    H[Arduino + Weight Sensor] -->|Serial| I[Serial Bridge]
+    I -->|MQTT| B
 ```
 
 **System Capabilities:**
@@ -46,7 +47,7 @@ graph LR
 - 🌐 **Multi-platform architecture** (Linux + Windows coordination)
 - 📡 **MQTT/ROS bridge** with cloud-based message broker
 - 🎮 **Interactive GUI** for sequence planning and monitoring
-- 🔬 **Full physics simulation** with contact-based grasping
+- ⚖️ **Arduino weight sensors** for milk consumption monitoring
 
 ---
 
@@ -108,6 +109,14 @@ graph LR
 - **Scrollable Canvas**: Dynamic content with mousewheel support
 - **State Visualization**: Real-time cow availability tracking
 
+### 🔌 Arduino Integration
+
+- **Custom Binary Protocol**: Efficient serial communication with header (`\xff`) and payload structure → [`bridge_serial2MQTT.py`](pkg01/scripts/bridge_serial2MQTT.py)
+- **Weight Monitoring**: Load cell simulation with button-based weight changes and LCD display
+- **Auto-detection**: COM port discovery via device description matching
+- **Event-Based Publishing**: Triggers MQTT messages when milk consumption thresholds are met or timeout occurs (20 seconds)
+- **Serial → MQTT Bridge**: Translates Arduino sensor data to MQTT topics (`cow/{calf_num}`) for robot coordination
+
 ---
 
 ## 📚 Technologies and Libraries
@@ -143,6 +152,15 @@ graph LR
 
 </details>
 
+<details>
+<summary><b>🔧 Hardware & Embedded</b></summary>
+
+- **[Arduino](https://www.arduino.cc/)** - Microcontroller for weight sensor simulation
+- **[Adafruit SSD1306](https://github.com/adafruit/Adafruit_SSD1306)** - OLED display library for weight visualization
+- **Custom Serial Protocol** - Binary message format with header/payload/footer structure
+
+</details>
+
 ---
 
 ## 📁 Project Structure
@@ -157,6 +175,13 @@ graph LR
 │   ├── 📂 launch/                    # ROS launch files for simulation
 │   ├── 📂 models/                    # Custom Gazebo models (bucket, cow)
 │   ├── 📂 scripts/                   # Python control scripts & bridges
+│   │   ├── 🐍 robot_movement.py      # Main robot controller
+│   │   ├── 🐍 bridge_keypad2robot.py # MQTT → ROS bridge
+│   │   ├── 🐍 bridge_serial2MQTT.py  # Arduino → MQTT bridge
+│   │   ├── 🐍 pickup_site.py         # Operator interface
+│   │   ├── 🐍 numerical_keypad.py    # GUI components
+│   │   └── 📂 calf_arduino/          # Arduino firmware
+│   │       └── 🔧 calf_arduino.ino   # Weight sensor code
 │   ├── 📂 urdf/                      # Robot description (xacro format)
 │   ├── 📂 world/                     # Gazebo world definitions
 │   ├── 📂 claude_explanations/       # Troubleshooting documentation 📖
@@ -175,6 +200,7 @@ graph LR
 |-----------|-------------|
 | **[`pkg01/claude_explanations/`](pkg01/claude_explanations/)** | 📖 Comprehensive markdown docs covering physics tuning, collision troubleshooting, and grasp reliability - essential reading |
 | **[`pkg01/scripts/`](pkg01/scripts/)** | 🐍 All executable Python scripts: robot controller, MQTT bridges, test utilities |
+| **[`pkg01/scripts/calf_arduino/`](pkg01/scripts/calf_arduino/)** | 🔧 Arduino firmware for weight sensor simulation with OLED display |
 | **[`pkg01/models/bucket/`](pkg01/models/bucket/)** | 🪣 Custom SDF model with extreme physics (μ=2000, kp=5M) for stable grasping |
 | **[`ur10e_moveit_config/config/`](ur10e_moveit_config/config/)** | ⚙️ MoveIt configuration with manually tuned collision matrices and named poses |
 
@@ -193,26 +219,53 @@ graph LR
 │ • Cow Tracking  │         │ • State Sync │         │ • Gripper Ctrl  │
 └─────────────────┘         └──────────────┘         └────────┬────────┘
                                                                │
-                                                               ▼
-                                                    ┌──────────────────┐
-                                                    │ Gazebo Simulation│
-                                                    │                  │
-                                                    │ • Physics Engine │
-                                                    │ • Contact Model  │
-                                                    │ • Visualization  │
-                                                    └──────────────────┘
+        ┌──────────────────────────────────────────────────────┘
+        │
+        ▼
+┌─────────────────┐                                 ┌──────────────────┐
+│ Serial Bridge   │                                 │ Gazebo Simulation│
+│   (Windows)     │                                 │   (Linux/WSL)    │
+│                 │                                 │                  │
+│ • Serial → MQTT │                                 │ • Physics Engine │
+│ • Weight Detect │                                 │ • Contact Model  │
+└────────┬────────┘                                 │ • Visualization  │
+         │                                          └──────────────────┘
+         ▼
+┌─────────────────┐
+│ Arduino + Sensor│
+│                 │
+│ • Weight Sensor │
+│ • LCD Display   │
+│ • Button Input  │
+└─────────────────┘
 ```
 
 </div>
 
 ### Communication Flow
 
-1. **Operator Interface** (Windows) → Plans cow milking sequences via Tkinter GUI
-2. **MQTT Bridge** (Linux/WSL) → Translates MQTT messages to ROS topics with queue management
-3. **Robot Controller** (Linux/WSL) → Orchestrates platform motion, MoveIt planning, and gripper control
+1. **Operator Interface** (Windows) → Plans cow milking sequences via Tkinter GUI, publishes to MQTT topic `Pickup-Site`
+2. **MQTT Bridge** (Linux/WSL) → Translates MQTT messages to ROS topics with queue management, subscribes to `Pickup-Site` and `cow/#`
+3. **Robot Controller** (Linux/WSL) → Orchestrates platform motion, MoveIt planning, and gripper control via ROS topics
 4. **Gazebo Simulation** → Executes physics-based movements with contact-based grasping
+5. **Arduino System** (Hardware) → Monitors bucket weight via load cells, displays on OLED screen
+6. **Serial Bridge** (Windows) → Reads Arduino serial data, publishes to `cow/{calf_num}` MQTT topics when consumption thresholds are met
 
 **Message Protocol**: HiveMQ Cloud with QoS 2 messaging ensures reliable delivery across the network boundary between Windows and Linux environments.
+
+### Arduino Protocol
+
+The Arduino communicates via a custom binary protocol over serial (9600 baud):
+```
+┌────────┬──────────┬────────┬────────┐
+│ Header │ Calf Num │ Weight │ Footer │
+│  0xFF  │  1 byte  │ 1 byte │  0xFE  │
+└────────┴──────────┴────────┴────────┘
+```
+
+**Trigger Conditions**:
+- Weight drops below `starting_weight - milk_limit` → Publishes `1` (cow finished drinking)
+- 20-second timeout reached → Publishes `0` (incomplete feeding)
 
 ---
 
