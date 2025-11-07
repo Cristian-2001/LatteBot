@@ -99,7 +99,7 @@ graph LR
 
 ### 📡 MQTT Integration
 
-- **[Paho MQTT](https://pypi.org/project/paho-mqtt/)**: TLS-encrypted pub/sub with QoS 2 (exactly-once delivery)
+- **[Paho MQTT](https://pypi.org/project/paho-mqtt/)**: TLS-encrypted pub/sub
 - **Bidirectional Bridging**: MQTT ↔ ROS topic translation with state tracking
 - **Distributed Architecture**: Windows UI ↔ Cloud Broker ↔ Linux Controller
 
@@ -265,7 +265,7 @@ The Arduino communicates via a custom binary protocol over serial (9600 baud):
 
 **Trigger Conditions**:
 - Weight drops below `starting_weight - milk_limit` → Publishes `1` (cow finished drinking)
-- 20-second timeout reached → Publishes `0` (incomplete feeding)
+- 120-second timeout reached → Publishes `0` (incomplete feeding)
 
 ---
 
